@@ -32,17 +32,18 @@ public class ShaderStrippingTool : EditorWindow
         "Snippet\nShaderType",
 
         "Data\nGraphics\nTier",
-        "Data\nShader\nCompiler\nPlatform",
+        "Data\nCompiler\nPlatform", //Shader Compiler Platform
         //"Data-SdrReq",
 
         "Keyword\nName",
         "Keyword\nType",
         "Keyword\nIndex",
         "Keyword\nValid",
-        "Keyword\nEnabled"
+        "Keyword\nEnabled",
         //"Keyword\nLocal",
         //"Keyword\nGlobalName",
         //"Keyword\nGlobalType"
+        "Duplicates"
     };
     int[] widthReductions = new int[]
     {
@@ -69,6 +70,7 @@ public class ShaderStrippingTool : EditorWindow
 
         // 0,
         // 10
+        -50,
     };
 
     [MenuItem("Window/ShaderStrippingTool")]
@@ -144,11 +146,34 @@ public class ShaderStrippingTool : EditorWindow
         //Display result
         if(SVL.list != null)
         {
-            //sort the list according to shader name
             if(!sorted) 
             {
+                //sort the list according to shader name
                 SVL.list = SVL.list.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
-                //SVL.list = SVL.list.Distinct().ToList();
+
+                //count the duplicates
+                for(int k=0; k < SVL.list.Count; k++)
+                {
+                    int variantDuplicates = SVL.list.Count( o=>
+                            o.shaderName == SVL.list[k].shaderName && 
+                            o.passType == SVL.list[k].passType && 
+                            o.passName == SVL.list[k].passName && 
+                            o.shaderType == SVL.list[k].shaderType && 
+                            o.graphicsTier == SVL.list[k].graphicsTier && 
+                            o.shaderCompilerPlatform == SVL.list[k].shaderCompilerPlatform && 
+                            o.shaderKeywordName == SVL.list[k].shaderKeywordName && 
+                            o.shaderKeywordType == SVL.list[k].shaderKeywordType && 
+                            o.shaderKeywordIndex == SVL.list[k].shaderKeywordIndex && 
+                            o.isShaderKeywordValid == SVL.list[k].isShaderKeywordValid && 
+                            o.isShaderKeywordEnabled == SVL.list[k].isShaderKeywordEnabled
+                        );
+                    SVL.list[k].variantDuplicates = variantDuplicates;
+                    SVL.list[k].noOfVariantsForThisShader = SVL.list.Count(o=>o.shaderName == SVL.list[k].shaderName);
+                }
+
+                //remove duplicates
+                SVL.list = SVL.list.Distinct().ToList();
+
                 sorted = true;
             }
 
@@ -158,8 +183,7 @@ public class ShaderStrippingTool : EditorWindow
                 if(SVL.list[k].shaderName != currentShader)
                 {
                     GUI.backgroundColor = originalBackgroundColor;
-                    int variantsFromShader = SVL.list.Count(o=>o.shaderName == SVL.list[k].shaderName);
-                    SVL.list[k].enabled = EditorGUILayout.Foldout( SVL.list[k].enabled, SVL.list[k].shaderName + " (" + variantsFromShader + ")" );
+                    SVL.list[k].enabled = EditorGUILayout.Foldout( SVL.list[k].enabled, SVL.list[k].shaderName + " (" + SVL.list[k].noOfVariantsForThisShader + ")" );
                     currentShader = SVL.list[k].shaderName;
                 }
                 else
@@ -244,6 +268,10 @@ public class ShaderCompiledVariant
 
     //shader
     public string shaderName;
+    public int noOfVariantsForThisShader = 0;
+
+    //for sorting
+    public int variantDuplicates { get; set; }
 
 };
 
