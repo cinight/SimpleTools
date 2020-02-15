@@ -15,7 +15,6 @@ public class ShaderStrippingTool : EditorWindow
 {
 	Vector2 scrollPosition;
 
-    //
     public static bool sorted = false;
     
     //ColumnSetup
@@ -45,32 +44,22 @@ public class ShaderStrippingTool : EditorWindow
         //"Keyword\nGlobalType"
         "Duplicates"
     };
-    int[] widthReductions = new int[]
+    float[] widthScale = new float[]
     {
-        //-70,
+        0.9f,
+        1.8f,
+        1.2f,
 
-        //140,
+        0.6f,
+        0.8f,
+   
+        2.3f,
+        1f,
+        0.6f,
+        0.6f,
+        0.6f,
 
-        -20,
-        60,
-        0,
-
-        -60,
-        -40,
-        // 20,
-        
-        100,
-        -20,
-        -30,
-        -80,
-        -80,
-        //-80,
-        //100,
-        //-30
-
-        // 0,
-        // 10
-        -50,
+        0.6f,
     };
 
     [MenuItem("Window/ShaderStrippingTool")]
@@ -79,13 +68,13 @@ public class ShaderStrippingTool : EditorWindow
 		var window = EditorWindow.GetWindow (typeof(ShaderStrippingTool));
 	}
 
-    public void Awake()
-    {
-    }
+    // public void Awake()
+    // {
+    // }
 
-    public void OnDestroy()
-    {
-    }
+    // public void OnDestroy()
+    // {
+    // }
 
     void OnGUI () 
 	{
@@ -111,7 +100,7 @@ public class ShaderStrippingTool : EditorWindow
 
         //Width for the columns & style
         float currentSize = this.position.width;
-        float widthForEach = currentSize / (columns.Length+0.6f);
+        float widthForEach = currentSize / (columns.Length+currentSize*0.0002f);
         GUIStyle background = new GUIStyle 
         { 
             normal = 
@@ -129,7 +118,7 @@ public class ShaderStrippingTool : EditorWindow
             GUI.backgroundColor = al ==0 ? columnColor1 :columnColor2;
             GUILayoutOption[] columnLayoutOption = new GUILayoutOption[]
             {
-                GUILayout.Width(widthForEach+widthReductions[i]),
+                GUILayout.Width(Mathf.RoundToInt(widthForEach*widthScale[i])),
                 GUILayout.Height(55)
             };
             EditorGUILayout.LabelField (columns[i],background,columnLayoutOption);
@@ -172,7 +161,7 @@ public class ShaderStrippingTool : EditorWindow
                     }
                 }
 
-                Debug.Log("count="+SVL.list.Count);
+                //Debug.Log("count="+SVL.list.Count);
 
                 sorted = true;
             }
@@ -209,7 +198,7 @@ public class ShaderStrippingTool : EditorWindow
                         else if(t.Contains("[Local]")) background.normal.textColor = Color.yellow;
                         else background.normal.textColor = Color.white;
 
-                        EditorGUILayout.LabelField (t,background,GUILayout.Width(widthForEach+widthReductions[i]));
+                        EditorGUILayout.LabelField (t,background,GUILayout.Width(widthForEach*widthScale[i]));
                     }
                     EditorGUILayout.EndHorizontal();
                 }
