@@ -154,25 +154,25 @@ public class ShaderStrippingTool : EditorWindow
                 //count the duplicates
                 for(int k=0; k < SVL.list.Count; k++)
                 {
-                    int variantDuplicates = SVL.list.Count( o=>
-                            o.shaderName == SVL.list[k].shaderName && 
-                            o.passType == SVL.list[k].passType && 
-                            o.passName == SVL.list[k].passName && 
-                            o.shaderType == SVL.list[k].shaderType && 
-                            o.graphicsTier == SVL.list[k].graphicsTier && 
-                            o.shaderCompilerPlatform == SVL.list[k].shaderCompilerPlatform && 
-                            o.shaderKeywordName == SVL.list[k].shaderKeywordName && 
-                            o.shaderKeywordType == SVL.list[k].shaderKeywordType && 
-                            o.shaderKeywordIndex == SVL.list[k].shaderKeywordIndex && 
-                            o.isShaderKeywordValid == SVL.list[k].isShaderKeywordValid && 
-                            o.isShaderKeywordEnabled == SVL.list[k].isShaderKeywordEnabled
-                        );
-                    SVL.list[k].variantDuplicates = variantDuplicates;
+                    SVL.list[k].variantDuplicates = SVL.GetVariantDuplicateCount(k);
                     SVL.list[k].noOfVariantsForThisShader = SVL.list.Count(o=>o.shaderName == SVL.list[k].shaderName);
                 }
 
                 //remove duplicates
-                SVL.list = SVL.list.Distinct().ToList();
+                int n = 0;
+                while(n < SVL.list.Count)
+                {
+                    if( SVL.GetVariantDuplicateCount(n) > 1)
+                    {
+                        SVL.list.Remove(SVL.list[n]);
+                    }
+                    else
+                    {
+                        n++;
+                    }
+                }
+
+                Debug.Log("count="+SVL.list.Count);
 
                 sorted = true;
             }
@@ -227,6 +227,24 @@ public class ShaderStrippingTool : EditorWindow
 public static class SVL
 {
     public static List<ShaderCompiledVariant> list;
+
+    public static int GetVariantDuplicateCount(int k)
+    {
+        int variantDuplicates = SVL.list.Count( o=>
+                o.shaderName == SVL.list[k].shaderName && 
+                o.passType == SVL.list[k].passType && 
+                o.passName == SVL.list[k].passName && 
+                o.shaderType == SVL.list[k].shaderType && 
+                o.graphicsTier == SVL.list[k].graphicsTier && 
+                o.shaderCompilerPlatform == SVL.list[k].shaderCompilerPlatform && 
+                o.shaderKeywordName == SVL.list[k].shaderKeywordName && 
+                o.shaderKeywordType == SVL.list[k].shaderKeywordType && 
+                o.shaderKeywordIndex == SVL.list[k].shaderKeywordIndex && 
+                o.isShaderKeywordValid == SVL.list[k].isShaderKeywordValid && 
+                o.isShaderKeywordEnabled == SVL.list[k].isShaderKeywordEnabled
+            );
+        return variantDuplicates;
+    }
 }
 
 public class ShaderCompiledVariant
