@@ -1,7 +1,6 @@
 # SimpleTools
 
-Some tools I made that helped my daily work.
-
+Some tools I made for making my daily work easier. \
 Unity version : 2019.3+, but should work in older versions with minor code fix
 
 ## Editor
