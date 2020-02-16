@@ -8,12 +8,20 @@ using System;
 public class PlaceObjectsTool : EditorWindow
 {
 	Vector2 scrollPosition;
-    string  errorMsg = "";
+
+    //Selections
     Transform[] objs;
     bool isParentGameObject = false;
     int selectedCount = 0;
     int childCount = 0;
 
+    //CopyPasteTransform
+    Transform copyFromTrans;
+
+    //ReplaceGameObject
+    GameObject replaceSrc;
+
+    //Toggles
 	bool    tg_distrbute = false;
     bool    tg_ran = false;
     bool    tg_ran_pos = false;
@@ -64,17 +72,28 @@ public class PlaceObjectsTool : EditorWindow
         //Selection
         GUILayout.Space(10);
 		GUILayout.Label ("Select objects OR select 1 parent object in Hierarchy", EditorStyles.wordWrappedLabel);
-        GUI.color = Color.cyan;
         UpdateSelectionStatus();
-        if(errorMsg == "") GUILayout.Label("Objects Selected : " + (isParentGameObject? ""+childCount : ""+selectedCount) );
-        GUI.color = Color.white;
-        GUILayout.Space(15);
+        if(childCount == 0 && selectedCount == 0)
+        {
+            EditorGUILayout.HelpBox("No object is selected in Hierarchy", MessageType.Error);
+        }
+        else
+        {
+            GUI.color = Color.cyan;
+            GUILayout.Label("Objects Selected : " + (isParentGameObject? ""+childCount : ""+selectedCount) );
+            GUI.color = Color.white;
+        }
+        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
         //Distribute Evenly
         tg_distrbute = EditorGUILayout.BeginToggleGroup ("Distribute Evenly", tg_distrbute); // Untick for free random
             EditorGUI.indentLevel++;
             spacing = EditorGUILayout.Vector3Field("Spacing", spacing);
             amount = EditorGUILayout.Vector3IntField("Amount", amount);
+            if ( amount.x <= 0 || amount.y <= 0 || amount.z <= 0 )
+            {
+                EditorGUILayout.HelpBox("Please put positive integer number for Amount", MessageType.Error);
+            }
             EditorGUI.indentLevel--;
         EditorGUILayout.EndToggleGroup();
         GUILayout.Space(15);
@@ -114,24 +133,40 @@ public class PlaceObjectsTool : EditorWindow
             GUI.backgroundColor = original;
             if (GUILayout.Button("Reset Object Transforms")) ResetTransform();
         EditorGUILayout.EndHorizontal();
-        GUILayout.Space(15);
+
+        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
         //Align Objects
         EditorGUILayout.BeginHorizontal();
-        //EditorGUILayout.LabelField("Align Objects");
         align = EditorGUILayout.Popup("Align to", align, alignList);
         if (GUILayout.Button ("Align Objects")) AlignObjects();
         EditorGUILayout.EndHorizontal();
-        GUILayout.Space(15);
+ 
+        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
-        //Error
-        GUI.color = Color.red;
-        if(errorMsg != "")
-        {
-            GUILayout.Label("Error", EditorStyles.boldLabel);
-            GUILayout.Label(errorMsg, EditorStyles.wordWrappedLabel);
-        }
-        GUILayout.Space(15);
+        //Copy paste object transform
+        copyFromTrans = (Transform)EditorGUILayout.ObjectField("Copy transform from",copyFromTrans, typeof(Transform), true);
+        EditorGUILayout.BeginHorizontal();
+            GUI.backgroundColor = Color.cyan;
+            if (GUILayout.Button ("Paste Transform")) CopyPasteTransform(0);
+            GUI.backgroundColor = original;
+            if (GUILayout.Button ("Paste Position")) CopyPasteTransform(1);
+            if (GUILayout.Button ("Paste Rotation")) CopyPasteTransform(2);
+            if (GUILayout.Button ("Paste Scale")) CopyPasteTransform(3);
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+        //Replace GameObject
+        GUILayout.Label("Replace scene object by object", EditorStyles.boldLabel);
+        EditorGUILayout.BeginHorizontal();
+        replaceSrc = (GameObject)EditorGUILayout.ObjectField("Source",replaceSrc, typeof(GameObject), true);
+            GUI.backgroundColor = Color.cyan;
+            if (GUILayout.Button ("Replace objects")) ReplaceObjects();
+            GUI.backgroundColor = original;
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.HelpBox("Cannot undo", MessageType.Warning);
+
 
         //***************
 		GUILayout.EndScrollView();
@@ -155,21 +190,15 @@ public class PlaceObjectsTool : EditorWindow
 
     void SetSelectionObjects()
     {
-        errorMsg = "";
-
+        objs = null;
         if (Selection.activeTransform == null)
         {
-            errorMsg += "\n"+"No object is selected in Hierarchy";
+            selectedCount = 0;
+            childCount = 0;
             return;
         }
 
         UpdateSelectionStatus();
-
-        //For enabling undo to work
-        for(int i=0; i<objs.Length; i++)
-        {
-            Undo.RecordObject(objs[i],"PlaceObjectsTool");
-        }
 
         if(!isParentGameObject)
         {
@@ -178,6 +207,7 @@ public class PlaceObjectsTool : EditorWindow
             for(int i=0; i<objs.Length; i++)
             {
                 objs[i] = Selection.gameObjects[i].transform;
+                Undo.RecordObject(objs[i],"PlaceObjectsTool");
             }
         }
         else
@@ -189,13 +219,15 @@ public class PlaceObjectsTool : EditorWindow
             for(int i=0; i<objs.Length; i++)
             {
                 objs[i] = temp[i+1];
+                Undo.RecordObject(objs[i],"PlaceObjectsTool");
             }
         }
 
         //Prevent no object selected
         if (objs.Length <= 0)
         {
-            errorMsg += "\n"+"No object is selected in Hierarchy";
+            selectedCount = 0;
+            childCount = 0;
         }
     }
 
@@ -214,7 +246,7 @@ public class PlaceObjectsTool : EditorWindow
         SetSelectionObjects();
 
         //Prevent error
-        if(errorMsg != "") return;
+        if(objs == null) return;
 
         for (int i = 0; i < objs.Length; i++)
         {
@@ -228,14 +260,9 @@ public class PlaceObjectsTool : EditorWindow
 	{
         SetSelectionObjects();
 
-        // Prevent negative amount
-        if ( amount.x <= 0 || amount.y <= 0 || amount.z <= 0 )
-        {
-            errorMsg += "\n"+"Please put positive integer number for Amount";
-        }
-
         //Prevent error
-        if(errorMsg != "") return;
+        if(objs == null) return;
+        if( amount.x <= 0 || amount.y <= 0 || amount.z <= 0 ) return;
 
         //Distribute evenly
         if (tg_distrbute)
@@ -320,7 +347,6 @@ public class PlaceObjectsTool : EditorWindow
             for (int i = 0; i < objs.Length; i++)
             {
                 objs[i].localScale = RandomV3(ran_sca_min, ran_sca_max);
-                
             }
         }
     }
@@ -339,7 +365,7 @@ public class PlaceObjectsTool : EditorWindow
         SetSelectionObjects();
 
         //Prevent error
-        if(errorMsg != "") return;
+        if(objs == null) return;
 
         float edge = 0;
 
@@ -371,5 +397,61 @@ public class PlaceObjectsTool : EditorWindow
             break;
         }
     }
+
+    void CopyPasteTransform(int type)
+    {
+        SetSelectionObjects();
+
+        //Prevent error
+        if(objs == null) return;
+
+        if(copyFromTrans != null)
+        {
+            //Paste transform
+            for (int i = 0; i < objs.Length; i++)
+            {
+                if(type == 0 || type == 1) objs[i].localPosition = copyFromTrans.localPosition;
+                if(type == 0 || type == 2) objs[i].localRotation = copyFromTrans.localRotation;
+                if(type == 0 || type == 3) objs[i].localScale = copyFromTrans.localScale;
+            }
+        }
+    }
+
+    void ReplaceObjects()
+    {
+        SetSelectionObjects();
+
+        //Prevent error
+        if(objs == null) return;
+
+        if(replaceSrc != null)
+        {
+            //Generate new
+            for (int i = 0; i < objs.Length; i++)
+            {
+                Transform t = objs[i].transform;
+                GameObject newObject = PrefabUtility.InstantiatePrefab(replaceSrc) as GameObject;
+                if(newObject == null)
+                {
+                    newObject = Instantiate(replaceSrc) as GameObject;
+                }
+                Transform newT = newObject.transform;
+                newT.parent = t.parent;
+                newT.position = t.position;
+                newT.rotation = t.rotation;
+                newT.localScale = t.localScale;
+            }
+            //Remove old
+            for (int i = 0; i < objs.Length; i++)
+            {
+                DestroyImmediate(objs[i].gameObject);
+            }
+        }
+    }
+
+    // void OnInspectorUpdate() 
+	// {
+	// 	this.Repaint();
+	// }
 
 }
