@@ -139,10 +139,10 @@ public class ShaderStrippingTool : EditorWindow
             {
                 //sort the list according to shader name
                 SVL.list = SVL.list.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
-
-                //count the duplicates
+                
                 for(int k=0; k < SVL.list.Count; k++)
                 {
+                    //count the duplicates
                     SVL.list[k].variantDuplicates = SVL.GetVariantDuplicateCount(k);
                     SVL.list[k].noOfVariantsForThisShader = SVL.list.Count(o=>o.shaderName == SVL.list[k].shaderName);
                 }
@@ -161,18 +161,29 @@ public class ShaderStrippingTool : EditorWindow
                     }
                 }
 
+                //set the total shadercompilation time back to original set
+                for(int k=0; k < SVL.list.Count; k++)
+                {
+                    SVL.list[k].shaderCompilationTime = MyCustomBuildProcessor.shaderCompilationTime[SVL.list[k].shaderName];
+                }
+
                 //Debug.Log("count="+SVL.list.Count);
 
                 sorted = true;
             }
-
+           
             string currentShader = "";
             for(int k=0; k < SVL.list.Count; k++)
             {
+                //Shader foldout
                 if(SVL.list[k].shaderName != currentShader)
                 {
                     GUI.backgroundColor = originalBackgroundColor;
-                    SVL.list[k].enabled = EditorGUILayout.Foldout( SVL.list[k].enabled, SVL.list[k].shaderName + " (" + SVL.list[k].noOfVariantsForThisShader + ")" );
+                    SVL.list[k].enabled = EditorGUILayout.Foldout( 
+                        SVL.list[k].enabled, SVL.list[k].shaderName + 
+                        " (" + SVL.list[k].noOfVariantsForThisShader + ")" +
+                        "      Compilation Time = "+SVL.list[k].shaderCompilationTime.ToString("0.000")+" seconds"
+                        );
                     currentShader = SVL.list[k].shaderName;
                 }
                 else
@@ -276,6 +287,7 @@ public class ShaderCompiledVariant
     //shader
     public string shaderName;
     public int noOfVariantsForThisShader = 0;
+    public double shaderCompilationTime = 0;
 
     //for sorting
     public int variantDuplicates { get; set; }
