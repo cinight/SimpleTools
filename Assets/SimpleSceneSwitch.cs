@@ -28,8 +28,9 @@ public class SimpleSceneSwitch : MonoBehaviour
         if(GUILayout.Button("\n Next \n",customButton,GUILayout.Width(200 * scale), GUILayout.Height(50 * scale))) NextScene();
         GUILayout.EndHorizontal();
 
-        int currentpage = SceneManager.GetActiveScene().buildIndex +1;
-        GUILayout.Label( currentpage + " / " + SceneManager.sceneCountInBuildSettings + " " + SceneManager.GetActiveScene().name );
+        int currentpage = SceneManager.GetActiveScene().buildIndex;
+        int totalpages = SceneManager.sceneCountInBuildSettings-1;
+        GUILayout.Label( currentpage + " / " + totalpages + " " + SceneManager.GetActiveScene().name );
 
         GUILayout.EndArea();
     }
