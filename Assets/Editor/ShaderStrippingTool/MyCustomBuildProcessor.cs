@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Rendering;
 using UnityEngine;
@@ -9,41 +8,18 @@ using UnityEngine.Rendering;
 class MyCustomBuildProcessor : IPreprocessShaders
 {
     public static int variantCount = 0;
-    private double prevTime = 0;
-    private double currentTime = 0;
-    private string startCompilingShader = "";
-
-    //shader compilation time
-    public static Dictionary<string, double> shaderCompilationTime = new Dictionary<string, double>();
 
     public MyCustomBuildProcessor()
     {
         SVL.list = new List<ShaderCompiledVariant>();
         SVL.list.Clear();
-        shaderCompilationTime.Clear();
         variantCount = 0;
-        prevTime = 0;
-        startCompilingShader = "";
     }
 
     public int callbackOrder { get { return 0; } }
 
     public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
     {
-        //Adding up compilation time
-        currentTime = EditorApplication.timeSinceStartup;
-        if(!shaderCompilationTime.ContainsKey(startCompilingShader))
-        {
-            shaderCompilationTime.Add(startCompilingShader,0);
-        }
-        else
-        {
-            shaderCompilationTime[startCompilingShader] += currentTime - prevTime;
-        }
-        prevTime = currentTime;
-        startCompilingShader = shader.name;
-
-        //Variants
         for (int i = 0; i < data.Count; ++i)
         {
             ShaderKeyword[] sk = data[i].shaderKeywordSet.GetShaderKeywords();
