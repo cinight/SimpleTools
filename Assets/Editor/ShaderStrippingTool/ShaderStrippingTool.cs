@@ -10,11 +10,14 @@ using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using UnityEditor.Rendering;
 using System.Reflection;
+using System.Text;
+using System.IO;
 
 public class ShaderStrippingTool : EditorWindow
 {
 	Vector2 scrollPosition;
-
+    string folderPath = "";
+    string savedFile = "";
     public static bool sorted = false;
     
     //ColumnSetup
@@ -68,9 +71,10 @@ public class ShaderStrippingTool : EditorWindow
 		var window = EditorWindow.GetWindow (typeof(ShaderStrippingTool));
 	}
 
-    // public void Awake()
-    // {
-    // }
+    public void Awake()
+    {
+        folderPath = Application.dataPath;
+    }
 
     // public void OnDestroy()
     // {
@@ -89,11 +93,24 @@ public class ShaderStrippingTool : EditorWindow
         }
         else
         {
-            GUI.color = Color.red;
-            GUILayout.Label ( "List is null", EditorStyles.wordWrappedLabel);
+            //GUI.color = Color.red;
+            //GUILayout.Label ( "List is null", EditorStyles.wordWrappedLabel);
 
             //Initial setup
             sorted = false;
+        }
+        GUI.color = Color.white;
+        //Show folder button
+        if(savedFile != "")
+        {
+            GUI.color = Color.green;
+            GUILayout.Label ( "Saved: "+savedFile, EditorStyles.wordWrappedLabel);
+            GUI.color = Color.white;
+            if (GUILayout.Button ("Show in explorer",GUILayout.Width(200)))
+            {
+                folderPath = folderPath.Replace(@"/", @"\");   // explorer doesn't like front slashes
+                System.Diagnostics.Process.Start("explorer.exe", "/select,"+folderPath);
+            }
         }
         GUI.color = Color.white;
         GUILayout.Space(15);
@@ -160,6 +177,55 @@ public class ShaderStrippingTool : EditorWindow
                         n++;
                     }
                 }
+
+                //save to CSV
+                savedFile = "";
+                List<string[]> rowData = new List<string[]>();
+                rowData.Add(new string[] {
+                    "Shader",
+                    "PassType",
+                    "PassName",
+                    "ShaderType",
+                    "GfxTier",
+                    "CompilerPlatform",
+                    "KeywordName",
+                    "KeywordType",
+                    "KeywordIndex",
+                    "KeywordValid",
+                    "KeywordEnabled",
+                    "Duplicates"});
+                for(int k=0; k < SVL.list.Count; k++)
+                {
+                    rowData.Add(new string[] {
+                        SVL.list[k].shaderName,
+                        SVL.list[k].passType,
+                        SVL.list[k].passName,
+                        SVL.list[k].shaderType,
+                        SVL.list[k].graphicsTier,
+                        SVL.list[k].shaderCompilerPlatform,
+                        SVL.list[k].shaderKeywordName,
+                        SVL.list[k].shaderKeywordType,
+                        SVL.list[k].shaderKeywordIndex,
+                        SVL.list[k].isShaderKeywordValid,
+                        SVL.list[k].isShaderKeywordEnabled,
+                        SVL.list[k].variantDuplicates+""});
+                }
+                string[][] output = new string[rowData.Count][];
+                for(int i = 0; i < output.Length; i++)
+                {
+                    output[i] = rowData[i];
+                }
+                int length = output.GetLength(0);
+                string delimiter = ",";
+                StringBuilder sb = new StringBuilder();
+                for (int index = 0; index < length; index++)
+                    sb.AppendLine(string.Join(delimiter, output[index]));
+                string filePath = folderPath+"/ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_hh-mm-ss")+".csv";
+                StreamWriter outStream = System.IO.File.CreateText(filePath);
+                outStream.WriteLine(sb);
+                outStream.Close();
+                rowData.Clear();
+                savedFile = filePath;
 
                 //Debug.Log("count="+SVL.list.Count);
 
