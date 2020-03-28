@@ -2,53 +2,23 @@
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using System;
-using UnityEngine.Experimental.Rendering;
-using UnityEditor.Experimental.AssetImporters;
-using Unity.Collections;
-using UnityEngine.Profiling;
-using UnityEngine.Rendering;
-using UnityEditor.Rendering;
 using System.Reflection;
-using System.Text;
-using System.IO;
 
 public class ShaderStrippingTool : EditorWindow
 {
 	Vector2 scrollPosition;
-    string folderPath = "";
-    string savedFile = "";
-    public static bool sorted = false;
+
+    public static string folderPath = "";
+    public static string savedFile = "";
     
     //ColumnSetup
     Color columnColor1 = new Color(0.3f,0.3f,0.3f,1);
     Color columnColor2 = new Color(0.28f,0.28f,0.28f,1);
-    string[] columns = new string[]
-    {
-        //"id",
 
-        //"Shader\nName",
-
-        "Snippet\nPassType",
-        "Snippet\nPassName",
-        "Snippet\nShaderType",
-
-        "Data\nGraphics\nTier",
-        "Data\nCompiler\nPlatform", //Shader Compiler Platform
-        //"Data-SdrReq",
-
-        "Keyword\nName",
-        "Keyword\nType",
-        "Keyword\nIndex",
-        "Keyword\nValid",
-        "Keyword\nEnabled",
-        //"Keyword\nLocal",
-        //"Keyword\nGlobalName",
-        //"Keyword\nGlobalType"
-        "Duplicates"
-    };
     float[] widthScale = new float[]
     {
+        0, //we don't show shader name
+
         0.9f,
         1.8f,
         1.2f,
@@ -71,10 +41,9 @@ public class ShaderStrippingTool : EditorWindow
 		var window = EditorWindow.GetWindow (typeof(ShaderStrippingTool));
 	}
 
-    public void Awake()
-    {
-        folderPath = Application.dataPath;
-    }
+    // public void Awake()
+    // {
+    // }
 
     // public void OnDestroy()
     // {
@@ -84,32 +53,27 @@ public class ShaderStrippingTool : EditorWindow
 	{
         Color originalBackgroundColor = GUI.backgroundColor;
 
-        //Title and page slot
+        //Title
         GUI.color = Color.cyan;
         GUILayout.Label ("Build the player and see the variants list here.", EditorStyles.wordWrappedLabel);
-        if(SVL.list !=null)
-        {
-            GUILayout.Label ( "Variant Count : " + MyCustomBuildProcessor.variantCount, EditorStyles.wordWrappedLabel );
-        }
-        else
-        {
-            //GUI.color = Color.red;
-            //GUILayout.Label ( "List is null", EditorStyles.wordWrappedLabel);
-
-            //Initial setup
-            sorted = false;
-        }
         GUI.color = Color.white;
-        //Show folder button
+
         if(savedFile != "")
         {
             GUI.color = Color.green;
+
+            //Result
+            GUILayout.Label ( "Build Time : " + SVL.buildTime.ToString("0.000") + " seconds", EditorStyles.wordWrappedLabel );
+            GUILayout.Label ( "Total Variant Count : " + SVL.variantCount, EditorStyles.wordWrappedLabel );
+
+            //Saved file path
             GUILayout.Label ( "Saved: "+savedFile, EditorStyles.wordWrappedLabel);
+
+            //Show folder button
             GUI.color = Color.white;
             if (GUILayout.Button ("Show in explorer",GUILayout.Width(200)))
             {
-                folderPath = folderPath.Replace(@"/", @"\");   // explorer doesn't like front slashes
-                System.Diagnostics.Process.Start("explorer.exe", "/select,"+folderPath);
+                System.Diagnostics.Process.Start("explorer.exe", "/select,"+folderPath.Replace(@"/", @"\")); // explorer doesn't like front slashes
             }
         }
         GUI.color = Color.white;
@@ -117,7 +81,7 @@ public class ShaderStrippingTool : EditorWindow
 
         //Width for the columns & style
         float currentSize = this.position.width;
-        float widthForEach = currentSize / (columns.Length+currentSize*0.0002f);
+        float widthForEach = currentSize / (SVL.columns.Length-1+currentSize*0.0002f);
         GUIStyle background = new GUIStyle 
         { 
             normal = 
@@ -129,7 +93,7 @@ public class ShaderStrippingTool : EditorWindow
 
         //Column Titles
         EditorGUILayout.BeginHorizontal();
-        for(int i=0;i<columns.Length;i++)
+        for(int i=1;i<SVL.columns.Length;i++)
         {
             int al = i%2;
             GUI.backgroundColor = al ==0 ? columnColor1 :columnColor2;
@@ -138,7 +102,7 @@ public class ShaderStrippingTool : EditorWindow
                 GUILayout.Width(Mathf.RoundToInt(widthForEach*widthScale[i])),
                 GUILayout.Height(55)
             };
-            EditorGUILayout.LabelField (columns[i],background,columnLayoutOption);
+            EditorGUILayout.LabelField (SVL.columns[i].Replace(" ","\n"),background,columnLayoutOption);
         }
         EditorGUILayout.EndHorizontal();
 
@@ -152,85 +116,7 @@ public class ShaderStrippingTool : EditorWindow
         //Display result
         if(SVL.list != null)
         {
-            if(!sorted) 
-            {
-                //sort the list according to shader name
-                SVL.list = SVL.list.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
-
-                //count the duplicates
-                for(int k=0; k < SVL.list.Count; k++)
-                {
-                    SVL.list[k].variantDuplicates = SVL.GetVariantDuplicateCount(k);
-                    SVL.list[k].noOfVariantsForThisShader = SVL.list.Count(o=>o.shaderName == SVL.list[k].shaderName);
-                }
-
-                //remove duplicates
-                int n = 0;
-                while(n < SVL.list.Count)
-                {
-                    if( SVL.GetVariantDuplicateCount(n) > 1)
-                    {
-                        SVL.list.Remove(SVL.list[n]);
-                    }
-                    else
-                    {
-                        n++;
-                    }
-                }
-
-                //save to CSV
-                savedFile = "";
-                List<string[]> rowData = new List<string[]>();
-                rowData.Add(new string[] {
-                    "Shader",
-                    "PassType",
-                    "PassName",
-                    "ShaderType",
-                    "GfxTier",
-                    "CompilerPlatform",
-                    "KeywordName",
-                    "KeywordType",
-                    "KeywordIndex",
-                    "KeywordValid",
-                    "KeywordEnabled",
-                    "Duplicates"});
-                for(int k=0; k < SVL.list.Count; k++)
-                {
-                    rowData.Add(new string[] {
-                        SVL.list[k].shaderName,
-                        SVL.list[k].passType,
-                        SVL.list[k].passName,
-                        SVL.list[k].shaderType,
-                        SVL.list[k].graphicsTier,
-                        SVL.list[k].shaderCompilerPlatform,
-                        SVL.list[k].shaderKeywordName,
-                        SVL.list[k].shaderKeywordType,
-                        SVL.list[k].shaderKeywordIndex,
-                        SVL.list[k].isShaderKeywordValid,
-                        SVL.list[k].isShaderKeywordEnabled,
-                        SVL.list[k].variantDuplicates+""});
-                }
-                string[][] output = new string[rowData.Count][];
-                for(int i = 0; i < output.Length; i++)
-                {
-                    output[i] = rowData[i];
-                }
-                int length = output.GetLength(0);
-                string delimiter = ",";
-                StringBuilder sb = new StringBuilder();
-                for (int index = 0; index < length; index++)
-                    sb.AppendLine(string.Join(delimiter, output[index]));
-                string filePath = folderPath+"/ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_hh-mm-ss")+".csv";
-                StreamWriter outStream = System.IO.File.CreateText(filePath);
-                outStream.WriteLine(sb);
-                outStream.Close();
-                rowData.Clear();
-                savedFile = filePath;
-
-                //Debug.Log("count="+SVL.list.Count);
-
-                sorted = true;
-            }
+            //SORTING
 
             string currentShader = "";
             for(int k=0; k < SVL.list.Count; k++)
@@ -251,7 +137,7 @@ public class ShaderStrippingTool : EditorWindow
                 {
                     EditorGUILayout.BeginHorizontal();
                     PropertyInfo[] props = typeof(ShaderCompiledVariant).GetProperties();
-                    for(int i=0;i<columns.Length;i++)
+                    for(int i=0;i<SVL.columns.Length;i++)
                     {
                         object value = props[i].GetValue(SVL.list[k]);
                         string t = value!=null ? value.ToString() : "-";
@@ -278,30 +164,95 @@ public class ShaderStrippingTool : EditorWindow
         EditorGUILayout.Separator ();
 	}
 }
-
+//===================================================================================================
 public static class SVL
 {
-    public static List<ShaderCompiledVariant> list;
+    public static double buildTime = 0;
+    public static int variantCount = 0;
+    public static List<ShaderCompiledVariant> list = new List<ShaderCompiledVariant>();
+    public static List<string[]> rowData = new List<string[]>();
+    public static string[] columns = new string[] 
+    {
+        "Shader",
+        "PassType",
+        "PassName",
+        "ShaderType",
+        "GfxTier",
+        "Platform",
+        "Keyword Name",
+        "Keyword Type",
+        "Keyword Index",
+        "Keyword Valid",
+        "Keyword Enabled",
+        "Duplicates"
+    };
 
     public static int GetVariantDuplicateCount(int k)
     {
-        int variantDuplicates = SVL.list.Count( o=>
-                o.shaderName == SVL.list[k].shaderName && 
-                o.passType == SVL.list[k].passType && 
-                o.passName == SVL.list[k].passName && 
-                o.shaderType == SVL.list[k].shaderType && 
-                o.graphicsTier == SVL.list[k].graphicsTier && 
-                o.shaderCompilerPlatform == SVL.list[k].shaderCompilerPlatform && 
-                o.shaderKeywordName == SVL.list[k].shaderKeywordName && 
-                o.shaderKeywordType == SVL.list[k].shaderKeywordType && 
-                o.shaderKeywordIndex == SVL.list[k].shaderKeywordIndex && 
-                o.isShaderKeywordValid == SVL.list[k].isShaderKeywordValid && 
-                o.isShaderKeywordEnabled == SVL.list[k].isShaderKeywordEnabled
+        int variantDuplicates = list.Count( o=>
+                o.shaderName == list[k].shaderName && 
+                o.passType == list[k].passType && 
+                o.passName == list[k].passName && 
+                o.shaderType == list[k].shaderType && 
+                o.graphicsTier == list[k].graphicsTier && 
+                o.shaderCompilerPlatform == list[k].shaderCompilerPlatform && 
+                o.shaderKeywordName == list[k].shaderKeywordName && 
+                o.shaderKeywordType == list[k].shaderKeywordType && 
+                o.shaderKeywordIndex == list[k].shaderKeywordIndex && 
+                o.isShaderKeywordValid == list[k].isShaderKeywordValid && 
+                o.isShaderKeywordEnabled == list[k].isShaderKeywordEnabled
             );
         return variantDuplicates;
     }
-}
 
+    public static void Sorting()
+    {
+        //sort the list according to shader name
+        list = list.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
+
+        //count the duplicates
+        for(int k=0; k < list.Count; k++)
+        {
+            list[k].variantDuplicates = GetVariantDuplicateCount(k);
+            list[k].noOfVariantsForThisShader = list.Count(o=>o.shaderName == list[k].shaderName);
+        }
+
+        //remove duplicates
+        int n = 0;
+        while(n < list.Count)
+        {
+            if( GetVariantDuplicateCount(n) > 1)
+            {
+                list.Remove(list[n]);
+            }
+            else
+            {
+                n++;
+            }
+        }
+
+        //make string list
+        rowData.Clear();
+        rowData.Add(columns);
+        for(int k=0; k < list.Count; k++)
+        {
+            rowData.Add(new string[] {
+                list[k].shaderName,
+                list[k].passType,
+                list[k].passName,
+                list[k].shaderType,
+                list[k].graphicsTier,
+                list[k].shaderCompilerPlatform,
+                list[k].shaderKeywordName,
+                list[k].shaderKeywordType,
+                list[k].shaderKeywordIndex,
+                list[k].isShaderKeywordValid,
+                list[k].isShaderKeywordEnabled,
+                list[k].variantDuplicates+""});
+        }
+    }
+}
+//===================================================================================================
 public class ShaderCompiledVariant
 {
     //id
@@ -345,7 +296,6 @@ public class ShaderCompiledVariant
 
     //for sorting
     public int variantDuplicates { get; set; }
-
 };
 
 
