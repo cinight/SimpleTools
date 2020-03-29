@@ -25,6 +25,25 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
     {
         int newVariantsForThisShader = 0;
 
+        //Add the "default" variant, i.e. when no keyword
+        CompiledShaderVariant scv_default = new CompiledShaderVariant();
+        //scv.id = id;
+        scv_default.shaderName = shader.name;
+        scv_default.passName = ""+snippet.passName;
+        scv_default.passType = ""+snippet.passType.ToString();
+        scv_default.shaderType = ""+snippet.shaderType.ToString();
+        scv_default.graphicsTier = "--";
+        scv_default.shaderCompilerPlatform = "--";
+        scv_default.shaderKeywordName = "No Keyword / All Off";
+        scv_default.shaderKeywordType = "--";
+        scv_default.shaderKeywordIndex = "-1";
+        scv_default.isShaderKeywordValid = "--";
+        scv_default.isShaderKeywordEnabled = "--";
+        SVL.variantlist.Add(scv_default);
+        SVL.variantCount++;
+        newVariantsForThisShader++;
+
+        //Go through all the variants
         for (int i = 0; i < data.Count; ++i)
         {
             ShaderKeyword[] sk = data[i].shaderKeywordSet.GetShaderKeywords();
@@ -64,24 +83,21 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
         }
 
         //Add to shader list
-        if(newVariantsForThisShader > 0) //TO DO - verify the actual processed shaders & variant
+        int compiledShaderId = SVL.shaderlist.FindIndex( o=> o.name == shader.name );
+        if( compiledShaderId == -1 )
         {
-            int compiledShaderId = SVL.shaderlist.FindIndex( o=> o.name == shader.name );
-            if( compiledShaderId == -1 )
-            {
-                CompiledShader newCompiledShader = new CompiledShader();
-                newCompiledShader.name = shader.name;
-                newCompiledShader.guiEnabled = false;
-                newCompiledShader.noOfVariantsForThisShader = 0;
-                SVL.shaderlist.Add(newCompiledShader);
-                compiledShaderId=SVL.shaderlist.Count-1;
-            }
-
-            //Add variant to shader
-            CompiledShader compiledShader = SVL.shaderlist[compiledShaderId];
-            compiledShader.noOfVariantsForThisShader += newVariantsForThisShader;
-            SVL.shaderlist[compiledShaderId] = compiledShader;
+            CompiledShader newCompiledShader = new CompiledShader();
+            newCompiledShader.name = shader.name;
+            newCompiledShader.guiEnabled = false;
+            newCompiledShader.noOfVariantsForThisShader = 0;
+            SVL.shaderlist.Add(newCompiledShader);
+            compiledShaderId=SVL.shaderlist.Count-1;
         }
+
+        //Add variant count to shader
+        CompiledShader compiledShader = SVL.shaderlist[compiledShaderId];
+        compiledShader.noOfVariantsForThisShader += newVariantsForThisShader;
+        SVL.shaderlist[compiledShaderId] = compiledShader;
     }
 }
 

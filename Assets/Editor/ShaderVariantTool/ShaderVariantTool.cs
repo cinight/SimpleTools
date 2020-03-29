@@ -73,7 +73,7 @@ public class ShaderVariantTool : EditorWindow
             GUI.color = Color.white;
             if (GUILayout.Button ("Show in explorer",GUILayout.Width(200)))
             {
-                System.Diagnostics.Process.Start("explorer.exe", "/select,"+folderPath.Replace(@"/", @"\")); // explorer doesn't like front slashes
+                System.Diagnostics.Process.Start("explorer.exe", "/select,"+savedFile.Replace(@"/", @"\")); // explorer doesn't like front slashes
             }
         }
         GUI.color = Color.white;
@@ -180,7 +180,7 @@ public static class SVL
         "Keyword Index",
         "Keyword Valid",
         "Keyword Enabled",
-        "Duplicates"
+        "Compiled Count"
     };
 
     public static int GetVariantDuplicateCount(int k)
