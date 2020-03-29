@@ -10,11 +10,12 @@ using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-class MyCustomBuildProcessor : IPreprocessShaders
+class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
 {
-    public MyCustomBuildProcessor()
+    public ShaderVariantTool_ShaderPreprocess()
     {
-        SVL.list.Clear();
+        SVL.shaderlist.Clear();
+        SVL.variantlist.Clear();
         SVL.variantCount = 0;
     }
 
@@ -22,12 +23,14 @@ class MyCustomBuildProcessor : IPreprocessShaders
 
     public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
     {
+        int newVariantsForThisShader = 0;
+
         for (int i = 0; i < data.Count; ++i)
         {
             ShaderKeyword[] sk = data[i].shaderKeywordSet.GetShaderKeywords();
             for (int k = 0; k < sk.Length; ++k)
             {
-                ShaderCompiledVariant scv = new ShaderCompiledVariant();
+                CompiledShaderVariant scv = new CompiledShaderVariant();
 
                 //scv.id = id;
                 scv.shaderName = shader.name;
@@ -48,8 +51,9 @@ class MyCustomBuildProcessor : IPreprocessShaders
                 scv.isShaderKeywordValid = ""+sk[k].IsValid();
                 scv.isShaderKeywordEnabled = ""+data[i].shaderKeywordSet.IsEnabled(sk[k]);
 
-                SVL.list.Add(scv);
+                SVL.variantlist.Add(scv);
                 SVL.variantCount++;
+                newVariantsForThisShader++;
 
                 //Just to verify API is correct
                 string globalShaderKeywordName = ShaderKeyword.GetGlobalKeywordName(sk[k]);
@@ -57,6 +61,26 @@ class MyCustomBuildProcessor : IPreprocessShaders
                 ShaderKeywordType globalShaderKeywordType = ShaderKeyword.GetGlobalKeywordType(sk[k]);
                 if( !isLocal && globalShaderKeywordType != ShaderKeyword.GetKeywordType(shader,sk[k]) ) Debug.Log("Bug. ShaderKeyword.GetGlobalKeywordType() and  ShaderKeyword.GetKeywordType() is wrong");
             }
+        }
+
+        //Add to shader list
+        if(newVariantsForThisShader > 0) //TO DO - verify the actual processed shaders & variant
+        {
+            int compiledShaderId = SVL.shaderlist.FindIndex( o=> o.name == shader.name );
+            if( compiledShaderId == -1 )
+            {
+                CompiledShader newCompiledShader = new CompiledShader();
+                newCompiledShader.name = shader.name;
+                newCompiledShader.guiEnabled = false;
+                newCompiledShader.noOfVariantsForThisShader = 0;
+                SVL.shaderlist.Add(newCompiledShader);
+                compiledShaderId=SVL.shaderlist.Count-1;
+            }
+
+            //Add variant to shader
+            CompiledShader compiledShader = SVL.shaderlist[compiledShaderId];
+            compiledShader.noOfVariantsForThisShader += newVariantsForThisShader;
+            SVL.shaderlist[compiledShaderId] = compiledShader;
         }
     }
 }
@@ -70,7 +94,7 @@ class ShaderVariantTool_BuildPreprocess : IPreprocessBuildWithReport
     }
 }
 
-class MyCustomBuildPostProcessor : IPostprocessBuildWithReport
+class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
 {
     public int callbackOrder { get { return 10; } }
 
@@ -83,8 +107,7 @@ class MyCustomBuildPostProcessor : IPostprocessBuildWithReport
         SVL.Sorting();
 
         //Write to CSV file
-        //ShaderStrippingTool.savedFile = "";
-        ShaderStrippingTool.folderPath = Application.dataPath.Replace("/Assets","/");
+        ShaderVariantTool.folderPath = Application.dataPath.Replace("/Assets","/");
         string[][] output = new string[SVL.rowData.Count][];
         for(int i = 0; i < output.Length; i++)
         {
@@ -95,8 +118,8 @@ class MyCustomBuildPostProcessor : IPostprocessBuildWithReport
         StringBuilder sb = new StringBuilder();
         for (int index = 0; index < length; index++)
             sb.AppendLine(string.Join(delimiter, output[index]));
-        ShaderStrippingTool.savedFile = ShaderStrippingTool.folderPath+"ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_hh-mm-ss")+".csv";
-        StreamWriter outStream = System.IO.File.CreateText(ShaderStrippingTool.savedFile);
+        ShaderVariantTool.savedFile = ShaderVariantTool.folderPath+"ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_hh-mm-ss")+".csv";
+        StreamWriter outStream = System.IO.File.CreateText(ShaderVariantTool.savedFile);
         outStream.WriteLine(sb);
         outStream.Close();
 

@@ -11,7 +11,7 @@ Unity version : 2019.3+, but should work in older versions with minor code fix
 | `ScreenCaptureEditorTool` | ![](READMEImages/ScreenCaptureEditorTool.JPG) | Just make a screen capture |
 | `RenameObjectsTool` | ![](READMEImages/RenameObjectsTool.JPG) | Rename scene objects or project files |
 | `PlaceObjectsTool` | ![](READMEImages/PlaceObjectsTool.JPG) | Distribute / Align / Random / CopyPaste the GameObjects transform, Replace objects |
-| `ShaderStrippingTool` | ![](READMEImages/ShaderStrippingTool.JPG) | See what shader variants are included in the build |
+| `ShaderVariantTool` | ![](READMEImages/ShaderVariantTool.JPG) | See what shader variants are included in the build |
 | `AnimationPreviewTool` | ![](READMEImages/AnimationPreviewTool.JPG) | Preview any animation that exists on any scene GameObjects |
 | `AsyncShaderCompilingTool` | ![](READMEImages/AsyncShaderCompilingTool.JPG) | Select materials and compile the shader passes |
 

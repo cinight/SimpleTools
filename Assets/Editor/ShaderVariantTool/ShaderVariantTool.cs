@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 
-public class ShaderStrippingTool : EditorWindow
+public class ShaderVariantTool : EditorWindow
 {
 	Vector2 scrollPosition;
 
@@ -14,7 +14,6 @@ public class ShaderStrippingTool : EditorWindow
     //ColumnSetup
     Color columnColor1 = new Color(0.3f,0.3f,0.3f,1);
     Color columnColor2 = new Color(0.28f,0.28f,0.28f,1);
-
     float[] widthScale = new float[]
     {
         0, //we don't show shader name
@@ -35,10 +34,10 @@ public class ShaderStrippingTool : EditorWindow
         0.6f,
     };
 
-    [MenuItem("Window/ShaderStrippingTool")]
+    [MenuItem("Window/ShaderVariantTool")]
 	public static void ShowWindow ()
 	{
-		var window = EditorWindow.GetWindow (typeof(ShaderStrippingTool));
+		var window = EditorWindow.GetWindow (typeof(ShaderVariantTool));
 	}
 
     // public void Awake()
@@ -64,6 +63,7 @@ public class ShaderStrippingTool : EditorWindow
 
             //Result
             GUILayout.Label ( "Build Time : " + SVL.buildTime.ToString("0.000") + " seconds", EditorStyles.wordWrappedLabel );
+            GUILayout.Label ( "Shader Count : " + SVL.shaderlist.Count, EditorStyles.wordWrappedLabel );
             GUILayout.Label ( "Total Variant Count : " + SVL.variantCount, EditorStyles.wordWrappedLabel );
 
             //Saved file path
@@ -114,33 +114,28 @@ public class ShaderStrippingTool : EditorWindow
         scrollPosition = GUILayout.BeginScrollView(scrollPosition,GUILayout.Width(0),GUILayout.Height(0));      
 
         //Display result
-        if(SVL.list != null)
+        if(SVL.shaderlist.Count >0 && SVL.rowData.Count > 0)
         {
-            //SORTING
-
-            string currentShader = "";
-            for(int k=0; k < SVL.list.Count; k++)
+            for(int k=1; k < SVL.rowData.Count; k++) //first row is title so start with 1
             {
-                if(SVL.list[k].shaderName != currentShader)
+                string shaderName = SVL.rowData[k][0];
+                int shaderIndex = SVL.shaderlist.FindIndex( o=> o.name == shaderName );
+                CompiledShader currentShader = SVL.shaderlist[shaderIndex];
+                
+                if(shaderName != SVL.rowData[k-1][0]) //show title
                 {
                     GUI.backgroundColor = originalBackgroundColor;
-                    SVL.list[k].enabled = EditorGUILayout.Foldout( SVL.list[k].enabled, SVL.list[k].shaderName + " (" + SVL.list[k].noOfVariantsForThisShader + ")" );
-                    currentShader = SVL.list[k].shaderName;
-                }
-                else
-                {
-                    SVL.list[k].enabled = SVL.list[k-1].enabled;
+                    currentShader.guiEnabled = EditorGUILayout.Foldout( currentShader.guiEnabled, shaderName + " (" + currentShader.noOfVariantsForThisShader + ")" );
+                    SVL.shaderlist[shaderIndex] = currentShader;
                 }
 
                 //Show the shader variants
-                if( SVL.list[k].enabled )
+                if( currentShader.guiEnabled )
                 {
                     EditorGUILayout.BeginHorizontal();
-                    PropertyInfo[] props = typeof(ShaderCompiledVariant).GetProperties();
-                    for(int i=0;i<SVL.columns.Length;i++)
+                    for(int i=1;i<SVL.columns.Length;i++)
                     {
-                        object value = props[i].GetValue(SVL.list[k]);
-                        string t = value!=null ? value.ToString() : "-";
+                        string t = SVL.rowData[k][i];
 
                         int al = i%2;
                         GUI.backgroundColor = al ==0 ? columnColor1 :columnColor2;
@@ -154,14 +149,14 @@ public class ShaderStrippingTool : EditorWindow
                     }
                     EditorGUILayout.EndHorizontal();
                 }
+                GUI.backgroundColor = originalBackgroundColor;
             }
-            GUI.backgroundColor = originalBackgroundColor;
         }
 
         //Scroll End
         GUILayout.FlexibleSpace();
         GUILayout.EndScrollView();
-        EditorGUILayout.Separator ();
+        EditorGUILayout.Separator();
 	}
 }
 //===================================================================================================
@@ -169,7 +164,8 @@ public static class SVL
 {
     public static double buildTime = 0;
     public static int variantCount = 0;
-    public static List<ShaderCompiledVariant> list = new List<ShaderCompiledVariant>();
+    public static List<CompiledShaderVariant> variantlist = new List<CompiledShaderVariant>();
+    public static List<CompiledShader> shaderlist = new List<CompiledShader>();
     public static List<string[]> rowData = new List<string[]>();
     public static string[] columns = new string[] 
     {
@@ -189,18 +185,18 @@ public static class SVL
 
     public static int GetVariantDuplicateCount(int k)
     {
-        int variantDuplicates = list.Count( o=>
-                o.shaderName == list[k].shaderName && 
-                o.passType == list[k].passType && 
-                o.passName == list[k].passName && 
-                o.shaderType == list[k].shaderType && 
-                o.graphicsTier == list[k].graphicsTier && 
-                o.shaderCompilerPlatform == list[k].shaderCompilerPlatform && 
-                o.shaderKeywordName == list[k].shaderKeywordName && 
-                o.shaderKeywordType == list[k].shaderKeywordType && 
-                o.shaderKeywordIndex == list[k].shaderKeywordIndex && 
-                o.isShaderKeywordValid == list[k].isShaderKeywordValid && 
-                o.isShaderKeywordEnabled == list[k].isShaderKeywordEnabled
+        int variantDuplicates = variantlist.Count( o=>
+                o.shaderName == variantlist[k].shaderName && 
+                o.passType == variantlist[k].passType && 
+                o.passName == variantlist[k].passName && 
+                o.shaderType == variantlist[k].shaderType && 
+                o.graphicsTier == variantlist[k].graphicsTier && 
+                o.shaderCompilerPlatform == variantlist[k].shaderCompilerPlatform && 
+                o.shaderKeywordName == variantlist[k].shaderKeywordName && 
+                o.shaderKeywordType == variantlist[k].shaderKeywordType && 
+                o.shaderKeywordIndex == variantlist[k].shaderKeywordIndex && 
+                o.isShaderKeywordValid == variantlist[k].isShaderKeywordValid && 
+                o.isShaderKeywordEnabled == variantlist[k].isShaderKeywordEnabled
             );
         return variantDuplicates;
     }
@@ -208,22 +204,23 @@ public static class SVL
     public static void Sorting()
     {
         //sort the list according to shader name
-        list = list.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
+        variantlist = variantlist.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
 
         //count the duplicates
-        for(int k=0; k < list.Count; k++)
+        for(int k=0; k < variantlist.Count; k++)
         {
-            list[k].variantDuplicates = GetVariantDuplicateCount(k);
-            list[k].noOfVariantsForThisShader = list.Count(o=>o.shaderName == list[k].shaderName);
+            CompiledShaderVariant temp = variantlist[k];
+            temp.variantDuplicates = GetVariantDuplicateCount(k);
+            variantlist[k] = temp;
         }
 
         //remove duplicates
         int n = 0;
-        while(n < list.Count)
+        while(n < variantlist.Count)
         {
             if( GetVariantDuplicateCount(n) > 1)
             {
-                list.Remove(list[n]);
+                variantlist.Remove(variantlist[n]);
             }
             else
             {
@@ -231,43 +228,50 @@ public static class SVL
             }
         }
 
-        //make string list
+        //make string lists
         rowData.Clear();
         rowData.Add(columns);
-        for(int k=0; k < list.Count; k++)
+        for(int k=0; k < variantlist.Count; k++)
         {
             rowData.Add(new string[] {
-                list[k].shaderName,
-                list[k].passType,
-                list[k].passName,
-                list[k].shaderType,
-                list[k].graphicsTier,
-                list[k].shaderCompilerPlatform,
-                list[k].shaderKeywordName,
-                list[k].shaderKeywordType,
-                list[k].shaderKeywordIndex,
-                list[k].isShaderKeywordValid,
-                list[k].isShaderKeywordEnabled,
-                list[k].variantDuplicates+""});
+                variantlist[k].shaderName,
+                variantlist[k].passType,
+                variantlist[k].passName,
+                variantlist[k].shaderType,
+                variantlist[k].graphicsTier,
+                variantlist[k].shaderCompilerPlatform,
+                variantlist[k].shaderKeywordName,
+                variantlist[k].shaderKeywordType,
+                variantlist[k].shaderKeywordIndex,
+                variantlist[k].isShaderKeywordValid,
+                variantlist[k].isShaderKeywordEnabled,
+                variantlist[k].variantDuplicates+""});
         }
+
+        //clean up
+        variantlist.Clear();
     }
 }
 //===================================================================================================
-public class ShaderCompiledVariant
+public struct CompiledShader
 {
-    //id
-    //public int id { get; set; }
+    public string name;
+    public bool guiEnabled;
+    public int noOfVariantsForThisShader;
+};
+public struct CompiledShaderVariant
+{
+    //shader
+    public string shaderName;
 
     //snippet
-    public string passType { get; set; }
-    public string passName { get; set; }
-    public string shaderType { get; set; }
+    public string passType;
+    public string passName;
+    public string shaderType;
 
     //data
-    public string graphicsTier { get; set; }
-    public string shaderCompilerPlatform { get; set; }
-    //public PlatformKeywordSet platformKeywordSet;
-    //public ShaderKeywordSet shaderKeywordSet;
+    public string graphicsTier;
+    public string shaderCompilerPlatform;
     //public string shaderRequirements;
 
     //data - PlatformKeywordSet
@@ -275,27 +279,18 @@ public class ShaderCompiledVariant
     //public string isplatformKeywordEnabled; //from PlatformKeywordSet
 
     //data - ShaderKeywordSet
-    public string shaderKeywordName { get; set; } //ShaderKeyword.GetKeywordName
-    public string shaderKeywordType { get; set; } //ShaderKeyword.GetKeywordType
-    public string shaderKeywordIndex { get; set; } //ShaderKeyword.index
-    public string isShaderKeywordValid { get; set; } //from ShaderKeyword.IsValid()
-    public string isShaderKeywordEnabled { get; set; } //from ShaderKeywordSet
+    public string shaderKeywordName; //ShaderKeyword.GetKeywordName
+    public string shaderKeywordType; //ShaderKeyword.GetKeywordType
+    public string shaderKeywordIndex; //ShaderKeyword.index
+    public string isShaderKeywordValid; //from ShaderKeyword.IsValid()
+    public string isShaderKeywordEnabled; //from ShaderKeywordSet
     //public ShaderKeyword shaderKeyword; //from ShaderKeywordSet.GetShaderKeywords
     //public string isShaderKeywordLocal { get; set; } //ShaderKeyword.IsKeywordLocal
     //public string globalShaderKeywordName { get; set; }//ShaderKeyword.GetGlobalKeywordName
     //public string globalShaderKeywordType { get; set; } //ShaderKeyword.GetGlobalKeywordType
     
-    //==================================== Will not be columns
-
-    //for GUI
-    public bool enabled = false;
-
-    //shader
-    public string shaderName;
-    public int noOfVariantsForThisShader = 0;
-
     //for sorting
-    public int variantDuplicates { get; set; }
+    public int variantDuplicates;
 };
 
 
