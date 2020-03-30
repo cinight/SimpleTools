@@ -2,7 +2,6 @@
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using System.Reflection;
 
 public class ShaderVariantTool : EditorWindow
 {
