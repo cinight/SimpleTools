@@ -122,22 +122,45 @@ class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
         //Sort the results and make row data
         SVL.Sorting();
 
-        //Write to CSV file
-        ShaderVariantTool.folderPath = Application.dataPath.Replace("/Assets","/");
-        string[][] output = new string[SVL.rowData.Count][];
-        for(int i = 0; i < output.Length; i++)
+        //Prepare CSV string
+        List<string[]> outputRows = new List<string[]>();
+
+        //Write Overview Result
+        outputRows.Add( new string[] { "Build Time (seonds)" , SVL.buildTime.ToString("0.000") } );
+        outputRows.Add( new string[] { "Shader Count" , "" + SVL.shaderlist.Count } );
+        outputRows.Add( new string[] { "Total Variant Count" , ""+SVL.variantCount } );
+        outputRows.Add( new string[] { "" } );
+
+        //Write Shader Result
+        outputRows.Add( new string[] { "Shader" , "Variant Count" } );
+        for(int i = 0; i < SVL.shaderlist.Count; i++)
         {
-            output[i] = SVL.rowData[i];
+            outputRows.Add( new string[] { SVL.shaderlist[i].name , ""+SVL.shaderlist[i].noOfVariantsForThisShader } );
         }
-        int length = output.GetLength(0);
+        outputRows.Add( new string[] { "" } );
+
+        //Write Each variant Result
+        for(int i = 0; i < SVL.rowData.Count; i++)
+        {
+            outputRows.Add( SVL.rowData[i] );
+        }
+
+        //Prepare CSV string
+        int length = outputRows.Count;
         string delimiter = ",";
         StringBuilder sb = new StringBuilder();
         for (int index = 0; index < length; index++)
-            sb.AppendLine(string.Join(delimiter, output[index]));
+            sb.AppendLine(string.Join(delimiter, outputRows[index]));
+        
+        //Write to CSV file
+        ShaderVariantTool.folderPath = Application.dataPath.Replace("/Assets","/");
         ShaderVariantTool.savedFile = ShaderVariantTool.folderPath+"ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_hh-mm-ss")+".csv";
         StreamWriter outStream = System.IO.File.CreateText(ShaderVariantTool.savedFile);
         outStream.WriteLine(sb);
         outStream.Close();
+
+        //CleanUp
+        outputRows.Clear();
 
         // TO DO - read the editor log shader compiled info
         //Debug.Log("MyCustomBuildProcessor.OnPostprocessBuild for target " + report.summary.platform + " at path " + report.summary.outputPath);
