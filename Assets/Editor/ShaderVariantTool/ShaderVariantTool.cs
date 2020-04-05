@@ -63,7 +63,8 @@ public class ShaderVariantTool : EditorWindow
             //Result
             GUILayout.Label ( "Build Time : " + SVL.buildTime.ToString("0.000") + " seconds", EditorStyles.wordWrappedLabel );
             GUILayout.Label ( "Shader Count : " + SVL.shaderlist.Count, EditorStyles.wordWrappedLabel );
-            GUILayout.Label ( "Total Variant Count : " + SVL.variantCount, EditorStyles.wordWrappedLabel );
+            GUILayout.Label ( "Total Variant Count : " + SVL.variantTotalCount, EditorStyles.wordWrappedLabel );
+            //GUILayout.Label ( "Total Data Count : " + SVL.compiledTotalCount, EditorStyles.wordWrappedLabel );
 
             //Saved file path
             GUILayout.Label ( "Saved: "+savedFile, EditorStyles.wordWrappedLabel);
@@ -162,7 +163,8 @@ public class ShaderVariantTool : EditorWindow
 public static class SVL
 {
     public static double buildTime = 0;
-    public static int variantCount = 0;
+    public static int compiledTotalCount = 0;
+    public static int variantTotalCount = 0;
     public static List<CompiledShaderVariant> variantlist = new List<CompiledShaderVariant>();
     public static List<CompiledShader> shaderlist = new List<CompiledShader>();
     public static List<string[]> rowData = new List<string[]>();

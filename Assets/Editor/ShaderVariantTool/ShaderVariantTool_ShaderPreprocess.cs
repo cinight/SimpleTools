@@ -16,7 +16,8 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
     {
         SVL.shaderlist.Clear();
         SVL.variantlist.Clear();
-        SVL.variantCount = 0;
+        SVL.compiledTotalCount = 0;
+        SVL.variantTotalCount = 0;
     }
 
     public int callbackOrder { get { return 10; } }
@@ -25,28 +26,34 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
     {
         int newVariantsForThisShader = 0;
 
-        //Add the "default" variant, i.e. when no keyword
-        CompiledShaderVariant scv_default = new CompiledShaderVariant();
-        //scv.id = id;
-        scv_default.shaderName = shader.name;
-        scv_default.passName = ""+snippet.passName;
-        scv_default.passType = ""+snippet.passType.ToString();
-        scv_default.shaderType = ""+snippet.shaderType.ToString();
-        scv_default.graphicsTier = "--";
-        scv_default.shaderCompilerPlatform = "--";
-        scv_default.shaderKeywordName = "No Keyword / All Off";
-        scv_default.shaderKeywordType = "--";
-        scv_default.shaderKeywordIndex = "-1";
-        scv_default.isShaderKeywordValid = "--";
-        scv_default.isShaderKeywordEnabled = "--";
-        SVL.variantlist.Add(scv_default);
-        SVL.variantCount++;
-        newVariantsForThisShader++;
+        //The real variant count
+        newVariantsForThisShader+=data.Count;
 
         //Go through all the variants
         for (int i = 0; i < data.Count; ++i)
         {
             ShaderKeyword[] sk = data[i].shaderKeywordSet.GetShaderKeywords();
+
+            //The default variant
+            if(sk.Length==0)
+            {
+                CompiledShaderVariant scv_default = new CompiledShaderVariant();
+                //scv.id = id;
+                scv_default.shaderName = shader.name;
+                scv_default.passName = ""+snippet.passName;
+                scv_default.passType = ""+snippet.passType.ToString();
+                scv_default.shaderType = ""+snippet.shaderType.ToString();
+                scv_default.graphicsTier = "--";
+                scv_default.shaderCompilerPlatform = "--";
+                scv_default.shaderKeywordName = "No Keyword / All Off";
+                scv_default.shaderKeywordType = "--";
+                scv_default.shaderKeywordIndex = "-1";
+                scv_default.isShaderKeywordValid = "--";
+                scv_default.isShaderKeywordEnabled = "--";
+                SVL.variantlist.Add(scv_default);
+                SVL.compiledTotalCount++;
+            }
+
             for (int k = 0; k < sk.Length; ++k)
             {
                 CompiledShaderVariant scv = new CompiledShaderVariant();
@@ -60,9 +67,9 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
                 scv.graphicsTier = ""+data[i].graphicsTier;
                 scv.shaderCompilerPlatform = ""+data[i].shaderCompilerPlatform;
                 //scv.shaderRequirements = ""+data[i].shaderRequirements;
-
                 //scv.platformKeywordName = ""+data[i].platformKeywordSet.ToString();
                 //scv.isplatformKeywordEnabled = ""+data[i].platformKeywordSet.IsEnabled(BuiltinShaderDefine.SHADER_API_DESKTOP);
+
                 bool isLocal = ShaderKeyword.IsKeywordLocal(sk[k]);
                 scv.shaderKeywordName = ( isLocal? "[Local] " : "[Global] " ) + ShaderKeyword.GetKeywordName(shader,sk[k]); //sk[k].GetKeywordName();
                 scv.shaderKeywordType = ""+ShaderKeyword.GetKeywordType(shader,sk[k]); //""+sk[k].GetKeywordType().ToString();
@@ -71,14 +78,13 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
                 scv.isShaderKeywordEnabled = ""+data[i].shaderKeywordSet.IsEnabled(sk[k]);
 
                 SVL.variantlist.Add(scv);
-                SVL.variantCount++;
-                newVariantsForThisShader++;
+                SVL.compiledTotalCount++;
 
                 //Just to verify API is correct
                 string globalShaderKeywordName = ShaderKeyword.GetGlobalKeywordName(sk[k]);
-                if( !isLocal && globalShaderKeywordName != ShaderKeyword.GetKeywordName(shader,sk[k]) ) Debug.Log("Bug. ShaderKeyword.GetGlobalKeywordName() and  ShaderKeyword.GetKeywordName() is wrong");
+                if( !isLocal && globalShaderKeywordName != ShaderKeyword.GetKeywordName(shader,sk[k]) ) Debug.LogError("Bug. ShaderKeyword.GetGlobalKeywordName() and  ShaderKeyword.GetKeywordName() is wrong");
                 ShaderKeywordType globalShaderKeywordType = ShaderKeyword.GetGlobalKeywordType(sk[k]);
-                if( !isLocal && globalShaderKeywordType != ShaderKeyword.GetKeywordType(shader,sk[k]) ) Debug.Log("Bug. ShaderKeyword.GetGlobalKeywordType() and  ShaderKeyword.GetKeywordType() is wrong");
+                if( !isLocal && globalShaderKeywordType != ShaderKeyword.GetKeywordType(shader,sk[k]) ) Debug.LogError("Bug. ShaderKeyword.GetGlobalKeywordType() and  ShaderKeyword.GetKeywordType() is wrong");
             }
         }
 
@@ -98,6 +104,9 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
         CompiledShader compiledShader = SVL.shaderlist[compiledShaderId];
         compiledShader.noOfVariantsForThisShader += newVariantsForThisShader;
         SVL.shaderlist[compiledShaderId] = compiledShader;
+
+        //Add to total count
+        SVL.variantTotalCount+=newVariantsForThisShader;
     }
 }
 
@@ -128,7 +137,8 @@ class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
         //Write Overview Result
         outputRows.Add( new string[] { "Build Time (seonds)" , SVL.buildTime.ToString("0.000") } );
         outputRows.Add( new string[] { "Shader Count" , "" + SVL.shaderlist.Count } );
-        outputRows.Add( new string[] { "Total Variant Count" , ""+SVL.variantCount } );
+        outputRows.Add( new string[] { "Total Variant Count" , ""+SVL.variantTotalCount } );
+        //outputRows.Add( new string[] { "Total Data Count" , ""+SVL.compiledTotalCount } );
         outputRows.Add( new string[] { "" } );
 
         //Write Shader Result
