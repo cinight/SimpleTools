@@ -16,6 +16,18 @@ public class SimpleSceneSwitch : MonoBehaviour
         NextScene();
     }
 
+    public void Update()
+    {
+        if (Input.GetKeyUp(KeyCode.PageUp))
+        {
+            NextScene();
+        }
+        else if (Input.GetKeyUp(KeyCode.PageDown))
+        {
+            PrevScene();
+        }
+    }
+
     void OnGUI()
     {
         GUI.skin.label.fontSize = Mathf.RoundToInt ( 16 * scale );
