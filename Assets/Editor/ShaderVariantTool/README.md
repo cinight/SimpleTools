@@ -3,7 +3,7 @@ This tool lists out all shader variants that are being included in player build.
 i.e. If a shader keyword is being stripped, you won't see the keyword on the list.
 \
 \
-2020.2+ \
+2020.2+
 
 ### How to use:
 1. Add the scripts to an Editor folder: \
