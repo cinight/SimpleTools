@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.Rendering;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -14,10 +15,8 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
 {
     public ShaderVariantTool_ShaderPreprocess()
     {
-        SVL.shaderlist.Clear();
-        SVL.variantlist.Clear();
-        SVL.compiledTotalCount = 0;
-        SVL.variantTotalCount = 0;
+        //Debug.Log("ShaderVariantTool_ShaderPreprocess starts now..");
+        SVL.ResetBuildList();
     }
 
     public int callbackOrder { get { return 10; } }
@@ -43,6 +42,7 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
                 scv_default.passName = ""+snippet.passName;
                 scv_default.passType = ""+snippet.passType.ToString();
                 scv_default.shaderType = ""+snippet.shaderType.ToString();
+                scv_default.kernelName = "--";
                 scv_default.graphicsTier = "--";
                 scv_default.shaderCompilerPlatform = "--";
                 scv_default.shaderKeywordName = "No Keyword / All Off";
@@ -63,6 +63,7 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
                 scv.passName = ""+snippet.passName;
                 scv.passType = ""+snippet.passType.ToString();
                 scv.shaderType = ""+snippet.shaderType.ToString();
+                scv.kernelName = "--";
 
                 scv.graphicsTier = ""+data[i].graphicsTier;
                 scv.shaderCompilerPlatform = ""+data[i].shaderCompilerPlatform;
@@ -115,6 +116,8 @@ class ShaderVariantTool_BuildPreprocess : IPreprocessBuildWithReport
     public int callbackOrder { get { return 10; } }
     public void OnPreprocessBuild(BuildReport report)
     {
+        //Debug.Log("ShaderVariantTool_BuildPreprocess starts now..");
+        SVL.ResetBuildList();
         SVL.buildTime = EditorApplication.timeSinceStartup;
     }
 }
@@ -134,7 +137,29 @@ class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
         //Prepare CSV string
         List<string[]> outputRows = new List<string[]>();
 
+        //Get Unity & branch version
+        string version_changeset = Convert.ToString(InternalEditorUtility.GetUnityRevision(), 16);
+        string version_branch = InternalEditorUtility.GetUnityBuildBranch();
+        string unity_version = Application.unityVersion +" "+ version_branch+" ("+version_changeset+")";
+
+        //Get Graphics API list
+        var gfxAPIsList = PlayerSettings.GetGraphicsAPIs(report.summary.platform);
+        string gfxAPIs = ""; 
+        for(int i=0; i<gfxAPIsList.Length; i++)
+        {
+            gfxAPIs += gfxAPIsList[i].ToString()+ " ";
+        }
+
+        //Build size
+        var buildSize = report.summary.totalSize / 1024;
+
         //Write Overview Result
+        outputRows.Add( new string[] { "Unity" , unity_version } );
+        outputRows.Add( new string[] { "Platform" , report.summary.platform.ToString() } );
+        outputRows.Add( new string[] { "Graphics API" , gfxAPIs } );
+        outputRows.Add( new string[] { "Build Path" , report.summary.outputPath } );
+        outputRows.Add( new string[] { "Build Size (Kb)" , buildSize.ToString() } );
+        //outputRows.Add( new string[] { "Build Time (seconds)" , ""+report.summary.totalTime } );
         outputRows.Add( new string[] { "Build Time (seonds)" , SVL.buildTime.ToString("0.000") } );
         outputRows.Add( new string[] { "Shader Count" , "" + SVL.shaderlist.Count } );
         outputRows.Add( new string[] { "Total Variant Count" , ""+SVL.variantTotalCount } );
@@ -172,7 +197,6 @@ class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
         //CleanUp
         outputRows.Clear();
 
-        // TO DO - read the editor log shader compiled info
-        //Debug.Log("MyCustomBuildProcessor.OnPostprocessBuild for target " + report.summary.platform + " at path " + report.summary.outputPath);
+        SVL.buildProcessStarted = false;
     }
 }

@@ -7,7 +7,7 @@ public class ShaderVariantTool : EditorWindow
 {
 	Vector2 scrollPosition;
 
-    public static string folderPath = "";
+     public static string folderPath = "";
     public static string savedFile = "";
     
     //ColumnSetup
@@ -21,16 +21,18 @@ public class ShaderVariantTool : EditorWindow
         1.8f,
         1.2f,
 
+        1.2f,
+
         0.6f,
         0.8f,
    
-        2.3f,
+        2.1f,
         1f,
-        0.6f,
-        0.6f,
-        0.6f,
+        0.5f,
+        0.5f,
+        0.5f,
 
-        0.6f,
+        0.4f,
     };
 
     [MenuItem("Window/ShaderVariantTool")]
@@ -162,6 +164,7 @@ public class ShaderVariantTool : EditorWindow
 //===================================================================================================
 public static class SVL
 {
+    public static bool buildProcessStarted = false;
     public static double buildTime = 0;
     public static int compiledTotalCount = 0;
     public static int variantTotalCount = 0;
@@ -174,6 +177,7 @@ public static class SVL
         "PassType",
         "PassName",
         "ShaderType",
+        "KernelName",
         "GfxTier",
         "Platform",
         "Keyword Name",
@@ -184,6 +188,19 @@ public static class SVL
         "Compiled Count"
     };
 
+    public static void ResetBuildList()
+    {
+        if(!buildProcessStarted)
+        {
+            SVL.shaderlist.Clear();
+            SVL.variantlist.Clear();
+            SVL.compiledTotalCount = 0;
+            SVL.variantTotalCount = 0;
+
+            buildProcessStarted = true;
+        }
+    }
+
     public static int GetVariantDuplicateCount(int k)
     {
         int variantDuplicates = variantlist.Count( o=>
@@ -191,6 +208,7 @@ public static class SVL
                 o.passType == variantlist[k].passType && 
                 o.passName == variantlist[k].passName && 
                 o.shaderType == variantlist[k].shaderType && 
+                o.kernelName == variantlist[k].kernelName && 
                 o.graphicsTier == variantlist[k].graphicsTier && 
                 o.shaderCompilerPlatform == variantlist[k].shaderCompilerPlatform && 
                 o.shaderKeywordName == variantlist[k].shaderKeywordName && 
@@ -239,6 +257,7 @@ public static class SVL
                 variantlist[k].passType,
                 variantlist[k].passName,
                 variantlist[k].shaderType,
+                variantlist[k].kernelName,
                 variantlist[k].graphicsTier,
                 variantlist[k].shaderCompilerPlatform,
                 variantlist[k].shaderKeywordName,
@@ -269,6 +288,9 @@ public struct CompiledShaderVariant
     public string passType;
     public string passName;
     public string shaderType;
+
+    //compute kernel
+    public string kernelName;
 
     //data
     public string graphicsTier;
