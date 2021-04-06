@@ -64,18 +64,18 @@ class ShaderVariantTool_ComputePreprocess : IPreprocessComputeShaders
                 scv.passType = "--";
                 scv.shaderType = "--";
 
-                scv.graphicsTier = ""+data[i].graphicsTier;
-                scv.shaderCompilerPlatform = ""+data[i].shaderCompilerPlatform;
+                scv.graphicsTier = data[i].graphicsTier.ToString();
+                scv.shaderCompilerPlatform = data[i].shaderCompilerPlatform.ToString();
                 //scv.shaderRequirements = ""+data[i].shaderRequirements;
                 //scv.platformKeywordName = ""+data[i].platformKeywordSet.ToString();
                 //scv.isplatformKeywordEnabled = ""+data[i].platformKeywordSet.IsEnabled(BuiltinShaderDefine.SHADER_API_DESKTOP);
 
                 bool isLocal = ShaderKeyword.IsKeywordLocal(sk[k]);
                 scv.shaderKeywordName = ( isLocal? "[Local] " : "[Global] " ) + ShaderKeyword.GetKeywordName(shader,sk[k]); //sk[k].GetKeywordName();
-                scv.shaderKeywordType = ""+ShaderKeyword.GetKeywordType(shader,sk[k]); //""+sk[k].GetKeywordType().ToString();
-                scv.shaderKeywordIndex = ""+sk[k].index;
-                scv.isShaderKeywordValid = ""+sk[k].IsValid();
-                scv.isShaderKeywordEnabled = ""+data[i].shaderKeywordSet.IsEnabled(sk[k]);
+                scv.shaderKeywordType = ShaderKeyword.GetKeywordType(shader,sk[k]).ToString(); //""+sk[k].GetKeywordType().ToString();
+                scv.shaderKeywordIndex = sk[k].index.ToString();
+                scv.isShaderKeywordValid = sk[k].IsValid().ToString();
+                scv.isShaderKeywordEnabled = data[i].shaderKeywordSet.IsEnabled(sk[k]).ToString();
 
                 SVL.variantlist.Add(scv);
                 SVL.compiledTotalCount++;

@@ -201,51 +201,33 @@ public static class SVL
         }
     }
 
-    public static int GetVariantDuplicateCount(int k)
-    {
-        int variantDuplicates = variantlist.Count( o=>
-                o.shaderName == variantlist[k].shaderName && 
-                o.passType == variantlist[k].passType && 
-                o.passName == variantlist[k].passName && 
-                o.shaderType == variantlist[k].shaderType && 
-                o.kernelName == variantlist[k].kernelName && 
-                o.graphicsTier == variantlist[k].graphicsTier && 
-                o.shaderCompilerPlatform == variantlist[k].shaderCompilerPlatform && 
-                o.shaderKeywordName == variantlist[k].shaderKeywordName && 
-                o.shaderKeywordType == variantlist[k].shaderKeywordType && 
-                o.shaderKeywordIndex == variantlist[k].shaderKeywordIndex && 
-                o.isShaderKeywordValid == variantlist[k].isShaderKeywordValid && 
-                o.isShaderKeywordEnabled == variantlist[k].isShaderKeywordEnabled
-            );
-        return variantDuplicates;
-    }
-
     public static void Sorting()
     {
         //sort the list according to shader name
         variantlist = variantlist.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
 
-        //count the duplicates
-        for(int k=0; k < variantlist.Count; k++)
+        //Unique item and duplicate counts
+        Dictionary<CompiledShaderVariant, int> uniqueSet = new Dictionary<CompiledShaderVariant, int>();
+
+        //count duplicates
+        for(int i=0; i<variantlist.Count; i++)
         {
-            CompiledShaderVariant temp = variantlist[k];
-            temp.variantDuplicates = GetVariantDuplicateCount(k);
-            variantlist[k] = temp;
+            //is a duplicate
+            if( uniqueSet.ContainsKey(variantlist[i]) )
+            {
+                //add to duplicate count
+                uniqueSet[variantlist[i]]++;
+            }
+            //new unique item
+            else
+            {
+                //add to unique list
+                uniqueSet.Add(variantlist[i],1);
+            }
         }
 
         //remove duplicates
-        int n = 0;
-        while(n < variantlist.Count)
-        {
-            if( GetVariantDuplicateCount(n) > 1)
-            {
-                variantlist.Remove(variantlist[n]);
-            }
-            else
-            {
-                n++;
-            }
-        }
+        variantlist = variantlist.Distinct().ToList();
 
         //make string lists
         rowData.Clear();
@@ -265,7 +247,7 @@ public static class SVL
                 variantlist[k].shaderKeywordIndex,
                 variantlist[k].isShaderKeywordValid,
                 variantlist[k].isShaderKeywordEnabled,
-                variantlist[k].variantDuplicates+""});
+                uniqueSet[variantlist[k]].ToString()});
         }
 
         //clean up
@@ -313,7 +295,7 @@ public struct CompiledShaderVariant
     //public string globalShaderKeywordType { get; set; } //ShaderKeyword.GetGlobalKeywordType
     
     //for sorting
-    public int variantDuplicates;
+    //public int variantDuplicates;
 };
 
 

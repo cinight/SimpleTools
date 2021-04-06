@@ -15,7 +15,6 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
 {
     public ShaderVariantTool_ShaderPreprocess()
     {
-        //Debug.Log("ShaderVariantTool_ShaderPreprocess starts now..");
         SVL.ResetBuildList();
     }
 
@@ -39,9 +38,9 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
                 CompiledShaderVariant scv_default = new CompiledShaderVariant();
                 //scv.id = id;
                 scv_default.shaderName = shader.name;
-                scv_default.passName = ""+snippet.passName;
-                scv_default.passType = ""+snippet.passType.ToString();
-                scv_default.shaderType = ""+snippet.shaderType.ToString();
+                scv_default.passName = snippet.passName;
+                scv_default.passType = snippet.passType.ToString();
+                scv_default.shaderType = snippet.shaderType.ToString();
                 scv_default.kernelName = "--";
                 scv_default.graphicsTier = "--";
                 scv_default.shaderCompilerPlatform = "--";
@@ -60,23 +59,23 @@ class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
 
                 //scv.id = id;
                 scv.shaderName = shader.name;
-                scv.passName = ""+snippet.passName;
-                scv.passType = ""+snippet.passType.ToString();
-                scv.shaderType = ""+snippet.shaderType.ToString();
+                scv.passName = snippet.passName;
+                scv.passType = snippet.passType.ToString();
+                scv.shaderType = snippet.shaderType.ToString();
                 scv.kernelName = "--";
 
-                scv.graphicsTier = ""+data[i].graphicsTier;
-                scv.shaderCompilerPlatform = ""+data[i].shaderCompilerPlatform;
+                scv.graphicsTier = data[i].graphicsTier.ToString();
+                scv.shaderCompilerPlatform = data[i].shaderCompilerPlatform.ToString();
                 //scv.shaderRequirements = ""+data[i].shaderRequirements;
                 //scv.platformKeywordName = ""+data[i].platformKeywordSet.ToString();
                 //scv.isplatformKeywordEnabled = ""+data[i].platformKeywordSet.IsEnabled(BuiltinShaderDefine.SHADER_API_DESKTOP);
 
                 bool isLocal = ShaderKeyword.IsKeywordLocal(sk[k]);
                 scv.shaderKeywordName = ( isLocal? "[Local] " : "[Global] " ) + ShaderKeyword.GetKeywordName(shader,sk[k]); //sk[k].GetKeywordName();
-                scv.shaderKeywordType = ""+ShaderKeyword.GetKeywordType(shader,sk[k]); //""+sk[k].GetKeywordType().ToString();
-                scv.shaderKeywordIndex = ""+sk[k].index;
-                scv.isShaderKeywordValid = ""+sk[k].IsValid();
-                scv.isShaderKeywordEnabled = ""+data[i].shaderKeywordSet.IsEnabled(sk[k]);
+                scv.shaderKeywordType = ShaderKeyword.GetKeywordType(shader,sk[k]).ToString(); //""+sk[k].GetKeywordType().ToString();
+                scv.shaderKeywordIndex = sk[k].index.ToString();
+                scv.isShaderKeywordValid = sk[k].IsValid().ToString();
+                scv.isShaderKeywordEnabled = data[i].shaderKeywordSet.IsEnabled(sk[k]).ToString();
 
                 SVL.variantlist.Add(scv);
                 SVL.compiledTotalCount++;
@@ -161,8 +160,8 @@ class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
         outputRows.Add( new string[] { "Build Size (Kb)" , buildSize.ToString() } );
         //outputRows.Add( new string[] { "Build Time (seconds)" , ""+report.summary.totalTime } );
         outputRows.Add( new string[] { "Build Time (seonds)" , SVL.buildTime.ToString("0.000") } );
-        outputRows.Add( new string[] { "Shader Count" , "" + SVL.shaderlist.Count } );
-        outputRows.Add( new string[] { "Total Variant Count" , ""+SVL.variantTotalCount } );
+        outputRows.Add( new string[] { "Shader Count" , SVL.shaderlist.Count.ToString() } );
+        outputRows.Add( new string[] { "Total Variant Count" , SVL.variantTotalCount.ToString() } );
         //outputRows.Add( new string[] { "Total Data Count" , ""+SVL.compiledTotalCount } );
         outputRows.Add( new string[] { "" } );
 
@@ -170,7 +169,7 @@ class ShaderVariantTool_BuildPostprocess : IPostprocessBuildWithReport
         outputRows.Add( new string[] { "Shader" , "Variant Count" } );
         for(int i = 0; i < SVL.shaderlist.Count; i++)
         {
-            outputRows.Add( new string[] { SVL.shaderlist[i].name , ""+SVL.shaderlist[i].noOfVariantsForThisShader } );
+            outputRows.Add( new string[] { SVL.shaderlist[i].name , SVL.shaderlist[i].noOfVariantsForThisShader.ToString() } );
         }
         outputRows.Add( new string[] { "" } );
 
