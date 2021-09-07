@@ -144,6 +144,13 @@ public class PlaceObjectsTool : EditorWindow
  
         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
+        //Place Objects to Ground
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button ("Move Objects to Ground")) MoveObjectToGround();
+        EditorGUILayout.EndHorizontal();
+ 
+        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
         //Copy paste object transform
         copyFromTrans = (Transform)EditorGUILayout.ObjectField("Copy transform from",copyFromTrans, typeof(Transform), true);
         EditorGUILayout.BeginHorizontal();
@@ -358,6 +365,25 @@ public class PlaceObjectsTool : EditorWindow
         v.y = UnityEngine.Random.Range(rmin.y, rmax.y);
         v.z = UnityEngine.Random.Range(rmin.z, rmax.z);
         return v;
+    }
+
+    void MoveObjectToGround()
+    {
+        SetSelectionObjects();
+
+        //Prevent error
+        if(objs == null) return;
+
+        for (int i = 0; i < objs.Length; i++)
+        {
+            Vector3 pos = objs[i].transform.position;
+            Vector3 sca = objs[i].transform.localScale;
+
+            pos.y = sca.y * 0.5f;
+
+            Undo.RecordObject(objs[i].transform, "MoveObjectToGround");
+            objs[i].transform.position = pos;
+        }
     }
 
     void AlignObjects()
