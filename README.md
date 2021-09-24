@@ -1,7 +1,7 @@
 # SimpleTools
 
 Some tools I made for making my daily work easier. \
-Unity version : 2020.2+ on master. For older versions pleaase see branches.
+Unity version : 2021.2+ on master. For older versions pleaase see branches.
 
 ## Editor
 
