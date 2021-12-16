@@ -221,6 +221,10 @@ namespace GfxQA.ShaderVariantTool
 
                             //total variant
                             currentLine = sr.ReadLine();
+                            if (currentLine.Contains("prepared") && !currentLine.Contains("variants, prepared"))
+                            {
+                                currentLine = sr.ReadLine();
+                            }
                             string totalVariant = Helper.ExtractString(currentLine, "" , " variants," );
                             totalVariant = totalVariant.Replace(" ","");
                             int totalVariantInt = int.Parse(totalVariant);
@@ -235,7 +239,7 @@ namespace GfxQA.ShaderVariantTool
                             if(remainingVariantInt > 0)
                             {
                                 currentLine = sr.ReadLine();
-                                while (!currentLine.Contains("finished in "))
+                                while (!currentLine.Contains("finished in ") || currentLine.Contains("variants ready"))
                                 {
                                     currentLine = sr.ReadLine();
                                 }
