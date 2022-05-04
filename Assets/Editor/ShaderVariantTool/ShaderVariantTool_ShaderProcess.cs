@@ -68,7 +68,7 @@ namespace GfxQA.ShaderVariantTool
 
                     bool isLocal = ShaderKeyword.IsKeywordLocal(sk[k]);
                     LocalKeyword lkey = new LocalKeyword(shader,sk[k].name);
-                    scv.shaderKeywordName = ( isLocal? "[Local] " : "[Global] " ) + sk[k].name; //sk[k].GetKeywordName();
+                    scv.shaderKeywordName = ( isLocal? "[Local]" : "[Global]" ) + sk[k].name; //sk[k].GetKeywordName();
                     scv.shaderKeywordType = isLocal? "--" : ShaderKeyword.GetGlobalKeywordType(sk[k]).ToString(); //""+sk[k].GetKeywordType().ToString();
                     scv.shaderKeywordIndex = sk[k].index.ToString();
                     scv.isShaderKeywordValid = sk[k].IsValid().ToString();

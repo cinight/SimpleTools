@@ -29,7 +29,13 @@ namespace GfxQA.ShaderVariantTool
             return timeString;
         }
 
-        public static string ExtractString(string line, string from, string to)
+        public static string GetRemainingString(string line, string from)
+        {
+            int index = line.IndexOf(from) + from.Length;
+            return line.Substring( index , line.Length - index);
+        }
+
+        public static string ExtractString(string line, string from, string to, bool takeLastIndexOfTo = true)
         {
             int pFrom = 0;
             if(from != "")
@@ -42,6 +48,11 @@ namespace GfxQA.ShaderVariantTool
             if(to != "")
             {
                 int index = line.LastIndexOf(to);
+                if(!takeLastIndexOfTo)
+                {
+                    index = line.IndexOf(to);
+                }
+
                 if(index >= 0) pTo = index;
             }
 

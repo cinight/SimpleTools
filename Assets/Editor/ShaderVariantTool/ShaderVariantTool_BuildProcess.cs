@@ -53,7 +53,7 @@ namespace GfxQA.ShaderVariantTool
             //Because of the new incremental build changes, Development build won't trigger OnShaderProcess - 1338940
             if(SVL.shaderlist.Count == 0)
             {
-                Debug.LogError("No shader or variant are logged. Please turn ON Delete PlayerCache Before Build checkbox in Window > ShaderVariantTool.");
+                Debug.LogError("No shader or variant are logged. Please go to Window > ShaderVariantTool > turn ON Delete PlayerCache Before Build checkbox.");
             } 
 
             //Calculate shader count by type
@@ -161,6 +161,9 @@ namespace GfxQA.ShaderVariantTool
             //CleanUp
             outputRows.Clear();
 
+            //Let user know the tool has successfully done it's job
+            Debug.Log("Build is done and ShaderVariantTool has done gathering data. Find the details on Windows > ShaderVariantTool, or look at the generated CSV reort at: "+ShaderVariantTool.savedFile);
+
             SVL.buildProcessStarted = false;
         }
 
@@ -219,45 +222,72 @@ namespace GfxQA.ShaderVariantTool
                             string programName = Helper.ExtractString(currentLine, passName+"\" (","");
                             programName = programName.Replace("\"","").Replace(")","");
 
-                            //total variant
+                            //skip the line bla bla bla prepared
                             currentLine = sr.ReadLine();
-                            string totalVariant = Helper.ExtractString(currentLine, "" , " variants," );
-                            totalVariant = totalVariant.Replace(" ","");
-                            int totalVariantInt = int.Parse(totalVariant);
+                            if (currentLine.Contains("prepared") && !currentLine.Contains("variants, prepared"))
+                            {
+                                currentLine = sr.ReadLine();
+                            }
 
                             //remaining variant & stripping time
-                            currentLine = sr.ReadLine();
-                            string strippingTime = Helper.ExtractString(currentLine, "finished in " , " seconds. " );
-                            string remainingVariant = Helper.ExtractString(currentLine, " seconds. " , " variants left" );
+                            string remainingVariant = Helper.ExtractString(currentLine, "" , " / " );
                             int remainingVariantInt = int.Parse(remainingVariant);
+
+                            //total variant
+                            string totalVariant = Helper.ExtractString(currentLine, "/ " , " variants" );
+                            totalVariant = totalVariant.Replace(" ","");
+                            int totalVariantInt = int.Parse(totalVariant);
+                            
+                            //stripping time
+                            string strippingTime = Helper.ExtractString(currentLine, "variants left after stripping, processed in " , " seconds" );
 
                             //jump to line of compilation time
                             if(remainingVariantInt > 0)
                             {
                                 currentLine = sr.ReadLine();
-                                while (!currentLine.Contains("finished in "))
+                                while (!currentLine.Contains("finished in ") || currentLine.Contains("variants ready"))
                                 {
                                     currentLine = sr.ReadLine();
                                 }
                             }
                             
                             //compilation time and compiled variant count (time is faster if there are cached variants)
+                            string remainingText = currentLine;
+                            string startString = "";
+                            string endString = "";
                             string compileTime = "0.00";
                             string compiledVariants = "0";
                             string localCache = "0";
                             string remoteCache = "0";
                             if(remainingVariantInt > 0)
                             {
-                                compileTime = Helper.ExtractString(currentLine, "finished in " , " seconds. " );
-                                compiledVariants = Helper.ExtractString(currentLine, ", compiled " , " variants" );
-                                localCache = Helper.ExtractString(currentLine, "Local cache hits " , ", remote" );
-                                remoteCache = Helper.ExtractString(currentLine, "remote cache hits " , ", compiled" ); 
+                                //Compile time
+                                startString = "finished in ";
+                                endString = " seconds. ";
+                                compileTime = Helper.ExtractString(remainingText,startString,endString,false);
+                                compileTime = compileTime.Replace(" ","");
+                                remainingText = Helper.GetRemainingString(remainingText,endString);
 
-                                //Changes for the latest PR
-                                localCache = Helper.ExtractString(localCache, "" , "(" );
+                                //Local cache hit
+                                startString = "Local cache hits ";
+                                endString = " (";
+                                localCache = Helper.ExtractString(remainingText,startString,endString,false);
                                 localCache = localCache.Replace(" ","");
-                                remoteCache = Helper.ExtractString(remoteCache, "" , "(" );
+                                remainingText = Helper.GetRemainingString(remainingText,endString);
+
+                                //Remote cache hit
+                                startString = "remote cache hits ";
+                                endString = " (";
+                                remoteCache = Helper.ExtractString(remainingText,startString,endString,false);
                                 remoteCache = remoteCache.Replace(" ","");
+                                remainingText = Helper.GetRemainingString(remainingText,endString);
+
+                                //Compiled variants
+                                startString = "), compiled ";
+                                endString = " variants (";
+                                compiledVariants = Helper.ExtractString(remainingText,startString,endString,false);
+                                compiledVariants = compiledVariants.Replace(" ","");
+                                remainingText = Helper.GetRemainingString(remainingText,endString);
                             }
                             int compiledVariantsInt = int.Parse(compiledVariants);
                             int localCacheInt = int.Parse(localCache);
@@ -300,12 +330,13 @@ namespace GfxQA.ShaderVariantTool
                 "Tool counted there are "+SVL.variantFromShader+" shader variants in build, "+
                 "but Editor Log counted "+variantCountinBuild+". Please contact @mingwai on slack.");
             }
-            if( SVL.variantInCache + SVL.variantCompiledCount != variantCountinBuild)
+            int variantCacheAndCompiledSum = SVL.variantInCache + SVL.variantCompiledCount;
+            if( variantCacheAndCompiledSum != variantCountinBuild)
             {
                 Debug.LogError("ShaderVariantTool error. "+
                 "The sum of "+SVL.variantInCache+" variants in cache + "+
-                SVL.variantCompiledCount+" variants compiled is not equal to the accumulated sum "+
-                variantCountinBuild+" variants. Please contact @mingwai on slack.");
+                SVL.variantCompiledCount+" variants compiled "+variantCacheAndCompiledSum+" variants is not equal to the accumulated sum "+
+                variantCountinBuild+" variants. Please contact @mingwai on slack. This could be related to exisiting known issue: Case 1389276");
             }
         }
     }
