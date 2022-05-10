@@ -21,18 +21,21 @@ namespace GfxQA.ShaderVariantTool
 
             0.9f,
             1.8f,
-            1.2f,
+            1f,
 
-            1.2f,
+            1.5f,
 
             0.6f,
             0.8f,
+            0.5f,
+
+            0.8f,
     
             2.1f,
-            1f,
             0.5f,
-            0.5f,
-            0.5f,
+            //0.5f,
+            //0.5f,
+            //0.5f,
 
             0.4f,
         };
@@ -210,6 +213,10 @@ namespace GfxQA.ShaderVariantTool
         //compute shader variant
         public static int variantFromCompute = 0;
         public static int computeShaderCount = 0;
+
+        //invalid or disabled keywords for final error logging
+        public static string invalidKey = "";
+        public static string disabledKey = "";
         
         //data
         public static List<CompiledShaderVariant> variantlist = new List<CompiledShaderVariant>();
@@ -223,12 +230,15 @@ namespace GfxQA.ShaderVariantTool
             "ShaderType",
             "KernelName",
             "GfxTier",
-            "Platform",
+            "Build Target",
+            "Compiler Platform",
+            //"Require",
+            "Platform Keywords",
             "Keyword Name",
             "Keyword Type",
-            "Keyword Index",
-            "Keyword Valid",
-            "Keyword Enabled",
+            //"Keyword Index",
+            //"Keyword Valid",
+            //"Keyword Enabled",
             "Compiled Count"
         };
 
@@ -261,7 +271,7 @@ namespace GfxQA.ShaderVariantTool
         public static void Sorting()
         {
             //sort the list according to shader name
-            variantlist = variantlist.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordIndex).ToList();
+            variantlist = variantlist.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordName).ToList();
 
             //Unique item and duplicate counts
             Dictionary<CompiledShaderVariant, int> uniqueSet = new Dictionary<CompiledShaderVariant, int>();
@@ -298,12 +308,15 @@ namespace GfxQA.ShaderVariantTool
                     variantlist[k].shaderType,
                     variantlist[k].kernelName,
                     variantlist[k].graphicsTier,
+                    variantlist[k].buildTarget,
                     variantlist[k].shaderCompilerPlatform,
+                    //variantlist[k].shaderRequirements,
+                    variantlist[k].platformKeywords,
                     variantlist[k].shaderKeywordName,
                     variantlist[k].shaderKeywordType,
-                    variantlist[k].shaderKeywordIndex,
-                    variantlist[k].isShaderKeywordValid,
-                    variantlist[k].isShaderKeywordEnabled,
+                    //variantlist[k].shaderKeywordIndex,
+                    //variantlist[k].isShaderKeywordValid,
+                    //variantlist[k].isShaderKeywordEnabled,
                     uniqueSet[variantlist[k]].ToString()});
             }
 
@@ -338,19 +351,20 @@ namespace GfxQA.ShaderVariantTool
 
         //data
         public string graphicsTier;
+        public string buildTarget; 
         public string shaderCompilerPlatform;
         //public string shaderRequirements;
 
         //data - PlatformKeywordSet
-        //public string platformKeywordName;
+        public string platformKeywords;
         //public string isplatformKeywordEnabled; //from PlatformKeywordSet
 
         //data - ShaderKeywordSet
         public string shaderKeywordName; //ShaderKeyword.GetKeywordName
         public string shaderKeywordType; //ShaderKeyword.GetKeywordType
-        public string shaderKeywordIndex; //ShaderKeyword.index
-        public string isShaderKeywordValid; //from ShaderKeyword.IsValid()
-        public string isShaderKeywordEnabled; //from ShaderKeywordSet
+        //public string shaderKeywordIndex; //ShaderKeyword.index
+        //public string isShaderKeywordValid; //from ShaderKeyword.IsValid()
+        //public string isShaderKeywordEnabled; //from ShaderKeywordSet
     };
 
 }
