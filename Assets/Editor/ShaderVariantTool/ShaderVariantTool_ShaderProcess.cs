@@ -39,12 +39,12 @@ namespace GfxQA.ShaderVariantTool
                     scv_default.shaderType = snippet.shaderType.ToString();
                     scv_default.kernelName = "--";
                     scv_default.graphicsTier = "--";
+                    scv_default.buildTarget = "--";
                     scv_default.shaderCompilerPlatform = "--";
+                    //scv_default.shaderRequirements = "--";
+                    scv_default.platformKeywords = "--";
                     scv_default.shaderKeywordName = "No Keyword / All Off";
                     scv_default.shaderKeywordType = "--";
-                    scv_default.shaderKeywordIndex = "-1";
-                    scv_default.isShaderKeywordValid = "--";
-                    scv_default.isShaderKeywordEnabled = "--";
                     SVL.variantlist.Add(scv_default);
                     SVL.compiledTotalCount++;
                 }
@@ -59,21 +59,26 @@ namespace GfxQA.ShaderVariantTool
                     scv.passType = snippet.passType.ToString();
                     scv.shaderType = snippet.shaderType.ToString();
                     scv.kernelName = "--";
-
+    
                     scv.graphicsTier = data[i].graphicsTier.ToString();
+                    scv.buildTarget = data[i].buildTarget.ToString();
                     scv.shaderCompilerPlatform = data[i].shaderCompilerPlatform.ToString();
-                    //scv.shaderRequirements = ""+data[i].shaderRequirements;
-                    //scv.platformKeywordName = ""+data[i].platformKeywordSet.ToString();
-                    //scv.isplatformKeywordEnabled = ""+data[i].platformKeywordSet.IsEnabled(BuiltinShaderDefine.SHADER_API_DESKTOP);
+                    //scv.shaderRequirements = data[i].shaderRequirements.ToString().Replace(",","\n");
+                    scv.platformKeywords = Helper.GetPlatformKeywordList(data[i].platformKeywordSet);
 
                     bool isLocal = ShaderKeyword.IsKeywordLocal(sk[k]);
                     LocalKeyword lkey = new LocalKeyword(shader,sk[k].name);
                     bool isDynamic = lkey.isDynamic;
                     scv.shaderKeywordName = ( isLocal? "[Local]" : "[Global]" ) + ( isDynamic? "[Dynamic] " : " " ) + sk[k].name; //sk[k].GetKeywordName();
                     scv.shaderKeywordType = isLocal? "--" : ShaderKeyword.GetGlobalKeywordType(sk[k]).ToString(); //""+sk[k].GetKeywordType().ToString();
-                    scv.shaderKeywordIndex = sk[k].index.ToString();
-                    scv.isShaderKeywordValid = sk[k].IsValid().ToString();
-                    scv.isShaderKeywordEnabled = data[i].shaderKeywordSet.IsEnabled(sk[k]).ToString();
+                    if( !sk[k].IsValid() )
+                    {
+                        SVL.invalidKey += "\n"+"Shader "+scv.shaderName+" Keyword "+scv.shaderKeywordName+" is invalid.";
+                    }
+                    if( !data[i].shaderKeywordSet.IsEnabled(sk[k]) )
+                    {
+                        SVL.disabledKey += "\n"+"Shader "+scv.shaderName+" Keyword "+scv.shaderKeywordName+" is not enabled. You can create a custom shader stripping script to strip it.";
+                    }
 
                     SVL.variantlist.Add(scv);
                     SVL.compiledTotalCount++;
