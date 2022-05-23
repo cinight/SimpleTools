@@ -52,8 +52,6 @@ public class ScenesThatContainThis : EditorWindow
         GUILayout.Label (msg, labelStyle);
         if(result.Count>0)
         {
-            GUILayout.Label (msg, labelStyle);
-
             for( int i=0; i<result.Count; i++ )
             {
                 string scenepath = result.ElementAt(i).Key;
