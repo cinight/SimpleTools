@@ -62,6 +62,9 @@ public class ScenesThatContainThis : EditorWindow
                     OpenScene(scenepath);
                 }
             }
+            GUI.color = Color.cyan;
+            if (GUILayout.Button ("Remove component from all the scenes")) RemoveComponent();
+            GUI.color = Color.white;
         }
 
         GUILayout.Space(15);
@@ -97,6 +100,29 @@ public class ScenesThatContainThis : EditorWindow
         msg += "Result : "+result.Count+" scenes"+"\n";
         msg +="\n";
 	}
+
+    void RemoveComponent()
+    {
+        for( int i=0; i<result.Count; i++ )
+        {
+            string scenepath = result.ElementAt(i).Key;
+
+            //Open the scene
+            OpenScene(scenepath);
+            Scene currentScene = EditorSceneManager.GetSceneAt(0);
+            EditorSceneManager.SetActiveScene(currentScene);
+
+            //Search adn remove the component
+            Object[] subsceneObjs = UnityEngine.GameObject.FindObjectsOfType(searchType.GetClass(),true);
+            for( int j=0; j<subsceneObjs.Length; j++ )
+            {
+                DestroyImmediate (subsceneObjs[j]);
+            }
+
+            //Save the scene
+            EditorSceneManager.SaveScene(currentScene);
+        }
+    }
 
     private void OpenScene(string path)
     {
