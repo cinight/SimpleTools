@@ -190,6 +190,7 @@ namespace GfxQA.ShaderVariantTool
         {
             //For making sure there is no bug
             int variantCountinBuild = 0;
+            int skippedVariantsTotalCount = 0;
 
             //Read EditorLog
             string fromtext = startTimeStamp;
@@ -269,6 +270,7 @@ namespace GfxQA.ShaderVariantTool
                             string compiledVariants = "0";
                             string localCache = "0";
                             string remoteCache = "0";
+                            string skippedVariants = "0";
                             if(remainingVariantInt > 0)
                             {
                                 //Compile time
@@ -298,10 +300,19 @@ namespace GfxQA.ShaderVariantTool
                                 compiledVariants = Helper.ExtractString(remainingText,startString,endString,false);
                                 compiledVariants = compiledVariants.Replace(" ","");
                                 remainingText = Helper.GetRemainingString(remainingText,endString);
+
+                                //Skipped variants
+                                startString = " skipped ";
+                                endString = " variants";
+                                skippedVariants = Helper.ExtractString(remainingText,startString,endString,false);
+                                skippedVariants = skippedVariants.Replace(" ","");
+                                remainingText = Helper.GetRemainingString(remainingText,endString);
                             }
                             int compiledVariantsInt = int.Parse(compiledVariants);
                             int localCacheInt = int.Parse(localCache);
                             int remoteCacheInt = int.Parse(remoteCache);
+                            int skippedVariantsInt = int.Parse(skippedVariants);
+                            skippedVariantsTotalCount += skippedVariantsInt;
                             float strippingTimeFloat = float.Parse(strippingTime);
                             float compileTimeFloat = float.Parse(compileTime);
                             //---------- Temp object info ------------//
@@ -324,7 +335,15 @@ namespace GfxQA.ShaderVariantTool
                                 //Add to existing shader record
                                 compiledShaderInfoFromEditorLog[templistID] = AccumulateToCompiledShader(temp,compiledShaderInfoFromEditorLog[templistID]);
                             }
-          
+
+                            //Bug checking
+                            if(remainingVariantInt != compiledVariantsInt + temp.editorLog_variantInCacheCount + skippedVariantsInt)
+                            {
+                                string debugText = "Shader: "+shaderName +" Pass: "+ passName +" Program: "+ programName + "\n";
+                                debugText += "Remaining "+remainingVariantInt +" != compiled "+compiledVariantsInt+" + cache "+ temp.editorLog_variantInCacheCount + "\n";
+                                debugText += "This is a bug. Please contact @mingwai on slack and provide Editor.log";
+                                Debug.LogError(debugText);
+                            }
                             //Debug
                             // if(shaderName == "Universal Render Pipeline/Lit")
                             // {
@@ -358,12 +377,11 @@ namespace GfxQA.ShaderVariantTool
                     "Tool counted there are "+SVL.variantFromShader+" shader variants in build, "+
                     "but Editor Log counted "+variantCountinBuild+". Please contact @mingwai on slack.");
                 }
-                int variantCacheAndCompiledSum = SVL.variantInCache + SVL.variantCompiledCount;
+                int variantCacheAndCompiledSum = SVL.variantInCache + SVL.variantCompiledCount + skippedVariantsTotalCount;
                 if( variantCacheAndCompiledSum != variantCountinBuild)
                 {
                     Debug.LogError("ShaderVariantTool error. "+
-                    "The sum of shader variants in EditorLog ("+variantCacheAndCompiledSum+" = "+SVL.variantInCache+" in cache + "+
-                    SVL.variantCompiledCount+" compiled) is not equal to the sum of shader variants collected by ShaderVariantTool ("+
+                    "The sum of shader variants in EditorLog ("+variantCacheAndCompiledSum+") is not equal to the sum of shader variants collected by ShaderVariantTool ("+
                     variantCountinBuild+"). Please contact @mingwai on slack. This could be related to exisiting known issue: Case 1389276");
                 }
 
