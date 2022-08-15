@@ -18,6 +18,7 @@ namespace GfxQA.ShaderVariantTool
         public void OnProcessComputeShader(ComputeShader shader, string kernelName, IList<ShaderCompilerData> data)
         {
             int newVariantsForThisShader = 0;
+            int dynamicVariantForThisShader = 0;
 
             //The real variant count
             newVariantsForThisShader+=data.Count;
@@ -26,6 +27,7 @@ namespace GfxQA.ShaderVariantTool
             for (int i = 0; i < data.Count; ++i)
             {
                 ShaderKeyword[] sk = data[i].shaderKeywordSet.GetShaderKeywords();
+                bool variantIsDynamic = false;
 
                 //The default variant
                 if(sk.Length==0)
@@ -65,11 +67,11 @@ namespace GfxQA.ShaderVariantTool
                     //scv.shaderRequirements = data[i].shaderRequirements.ToString().Replace(",","\n");
                     scv.platformKeywords =Helper.GetPlatformKeywordList(data[i].platformKeywordSet);
 
-                    bool isLocal = ShaderKeyword.IsKeywordLocal(sk[k]);
                     LocalKeyword lkey = new LocalKeyword(shader,sk[k].name);
                     bool isDynamic = lkey.isDynamic;
-                    scv.shaderKeywordName = ( isLocal? "[Local]" : "[Global]" ) + ( isDynamic? "[Dynamic] " : " " ) + sk[k].name; //sk[k].GetKeywordName();
-                    scv.shaderKeywordType = isLocal? "--" : ShaderKeyword.GetGlobalKeywordType(sk[k]).ToString(); //""+sk[k].GetKeywordType().ToString();
+                    if(isDynamic) variantIsDynamic = true;
+                    scv.shaderKeywordName = ( isDynamic? "[Dynamic] " : " " ) + sk[k].name; //sk[k].GetKeywordName();
+                    scv.shaderKeywordType = ShaderKeyword.GetGlobalKeywordType(sk[k]).ToString(); //""+sk[k].GetKeywordType().ToString();
                     if( !sk[k].IsValid() )
                     {
                         SVL.invalidKey += "\n"+"Shader "+scv.shaderName+" Keyword "+scv.shaderKeywordName+" is invalid.";
@@ -88,6 +90,11 @@ namespace GfxQA.ShaderVariantTool
                 // ShaderKeywordType globalShaderKeywordType = ShaderKeyword.GetGlobalKeywordType(sk[k]);
                     //if( !isLocal && globalShaderKeywordType != ShaderKeyword.GetKeywordType(shader,sk[k]) ) Debug.LogError("Bug. ShaderKeyword.GetGlobalKeywordType() and  ShaderKeyword.GetKeywordType() is wrong");
                 }
+
+                if(variantIsDynamic)
+                {
+                    dynamicVariantForThisShader++;
+                }
             }
 
             //Add to shader list
@@ -98,6 +105,7 @@ namespace GfxQA.ShaderVariantTool
                 newCompiledShader.name = shader.name;
                 newCompiledShader.guiEnabled = false;
                 newCompiledShader.noOfVariantsForThisShader = 0;
+                newCompiledShader.dynamicVariantForThisShader = 0;
                 SVL.shaderlist.Add(newCompiledShader);
                 SVL.computeShaderCount++;
                 compiledShaderId=SVL.shaderlist.Count-1;
@@ -106,11 +114,13 @@ namespace GfxQA.ShaderVariantTool
             //Add variant count to shader
             CompiledShader compiledShader = SVL.shaderlist[compiledShaderId];
             compiledShader.noOfVariantsForThisShader += newVariantsForThisShader;
+            compiledShader.dynamicVariantForThisShader += dynamicVariantForThisShader;
             SVL.shaderlist[compiledShaderId] = compiledShader;
 
             //Add to total count
             SVL.variantTotalCount+=newVariantsForThisShader;
             SVL.variantFromCompute+=newVariantsForThisShader;
+            SVL.computeDynamicVariant+=dynamicVariantForThisShader;
         }
     }
 }

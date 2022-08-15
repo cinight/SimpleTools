@@ -94,6 +94,7 @@ namespace GfxQA.ShaderVariantTool
                 GUILayout.Label ( "Shader Variant Count before Stripping: " + SVL.variantBeforeStrippingCount, EditorStyles.wordWrappedLabel );
                 GUILayout.Label ( "Shader Variant Count in Build: " + SVL.variantFromShader+  
                 " (cached:" + SVL.variantInCache + " compiled:" + SVL.variantCompiledCount +")", EditorStyles.wordWrappedLabel );
+                GUILayout.Label ( "Shader Dynamic Branch variant count: " + SVL.shaderDynamicVariant );
 
                 GUILayout.Space(5);
 
@@ -102,6 +103,7 @@ namespace GfxQA.ShaderVariantTool
                 GUILayout.Label ( "ComputeShader" , EditorStyles.boldLabel );
                 GUILayout.Label ( "ComputeShader Count: " + SVL.computeShaderCount, EditorStyles.wordWrappedLabel );
                 GUILayout.Label ( "ComputeShader Variant Count in Build: " + SVL.variantFromCompute, EditorStyles.wordWrappedLabel );
+                GUILayout.Label ( "ComputeShader Dynamic Branch variant count: " + SVL.computeDynamicVariant );
 
                 GUILayout.Space(10);
 
@@ -170,8 +172,7 @@ namespace GfxQA.ShaderVariantTool
                             GUI.backgroundColor = al ==0 ? columnColor1 :columnColor2;
                             if(t == "True") background.normal.textColor = Color.green;
                             else if(t == "False") background.normal.textColor = Color.red;
-                            else if(t.Contains("[Global]")) background.normal.textColor = Color.cyan;
-                            else if(t.Contains("[Local]")) background.normal.textColor = Color.yellow;
+                            else if(t.Contains("[Dynamic]")) background.normal.textColor = Color.cyan;
                             else background.normal.textColor = Color.white;
 
                             EditorGUILayout.LabelField (t,background,GUILayout.Width(widthForEach*widthScale[i]));
@@ -209,10 +210,12 @@ namespace GfxQA.ShaderVariantTool
         public static int variantInCache = 0;
         public static int normalShaderCount = 0;
         public static int variantFromShader = 0;
+        public static int shaderDynamicVariant = 0; //This will always hit shadercache == will not compile
 
         //compute shader variant
         public static int variantFromCompute = 0;
         public static int computeShaderCount = 0;
+        public static int computeDynamicVariant = 0; //This will always hit shadercache == will not compile
 
         //invalid or disabled keywords for final error logging
         public static string invalidKey = "";
@@ -259,6 +262,8 @@ namespace GfxQA.ShaderVariantTool
                 variantFromShader = 0;
                 computeShaderCount = 0;
                 normalShaderCount = 0;
+                shaderDynamicVariant = 0;
+                computeDynamicVariant = 0;
 
                 //For reading EditorLog, we can extract the contents
                 buildProcessID = System.DateTime.Now.ToString("yyyyMMdd_hh-mm-ss");
@@ -330,6 +335,7 @@ namespace GfxQA.ShaderVariantTool
         public string name;
         public bool guiEnabled;
         public int noOfVariantsForThisShader;
+        public int dynamicVariantForThisShader;
         public int editorLog_originalVariantCount;
         public int editorLog_remainingVariantCount;
         public int editorLog_compiledVariantCount;

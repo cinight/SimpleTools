@@ -105,11 +105,13 @@ namespace GfxQA.ShaderVariantTool
             outputRows.Add( new string[] { "Shader Variant Count before Stripping" , SVL.variantBeforeStrippingCount.ToString() } );
             outputRows.Add( new string[] { "Shader Variant Count in Build" , SVL.variantFromShader+
             " (cached:" + SVL.variantInCache + " compiled:" + SVL.variantCompiledCount +")" } );
+            outputRows.Add( new string[] { "Shader Dynamic Branch variant count:" , SVL.shaderDynamicVariant.ToString() } );
 
             //Write Overview - Compute
             //outputRows.Add( new string[] { "ComputeShaders ----------------------------------" } );
             outputRows.Add( new string[] { "ComputeShader Count" , SVL.computeShaderCount.ToString() } );
             outputRows.Add( new string[] { "ComputeShader Variant Count in Build" , SVL.variantFromCompute.ToString() } );
+            outputRows.Add( new string[] { "ComputeShader Dynamic Branch variant count:" , SVL.computeDynamicVariant.ToString() } );
             outputRows.Add( new string[] { "" } );
 
             //Write Shader Result from Editor Log
@@ -143,6 +145,7 @@ namespace GfxQA.ShaderVariantTool
                 "Shader", 
                 "Variant Count before Stripping", 
                 "Variant in Cache",
+                "Dynamic branch variants",
                 "Compiled Variant Count", 
                 "Variant Count in Build",
                 "Stripping+Compilation Time"
@@ -154,6 +157,7 @@ namespace GfxQA.ShaderVariantTool
                     shaderlist[i].name, 
                     shaderlist[i].editorLog_originalVariantCount.ToString(),
                     shaderlist[i].editorLog_variantInCacheCount.ToString(),
+                    shaderlist[i].dynamicVariantForThisShader.ToString(),
                     shaderlist[i].editorLog_compiledVariantCount.ToString(),
                     shaderlist[i].noOfVariantsForThisShader.ToString(),
                     //shaderlist[i].editorLog_renamingVariantCount.ToString(),
@@ -323,6 +327,7 @@ namespace GfxQA.ShaderVariantTool
                             temp.editorLog_totalProcessTime = strippingTimeFloat+compileTimeFloat;
                             temp.editorLog_remainingVariantCount = remainingVariantInt;
                             temp.editorLog_variantInCacheCount = localCacheInt+remoteCacheInt;
+                            temp.dynamicVariantForThisShader = 0;
                             //---------- Add to temp list ------------//
                             int templistID = compiledShaderInfoFromEditorLog.IndexOf(compiledShaderInfoFromEditorLog.Find(x => x.name.Equals(temp.name)));
                             if(templistID == -1)
@@ -363,7 +368,7 @@ namespace GfxQA.ShaderVariantTool
                 {
                     int listID = SVL.shaderlist.IndexOf(SVL.shaderlist.Find(x => x.name.Equals(compiledShaderInfoFromEditorLog[i].name)));
                     SVL.shaderlist[listID] = AccumulateToCompiledShader(compiledShaderInfoFromEditorLog[i],SVL.shaderlist[listID]);
-                    //---------- For total countinvariantInCacheg ------------//
+                    //---------- For total countinvariantInCache ------------//
                     SVL.variantBeforeStrippingCount += compiledShaderInfoFromEditorLog[i].editorLog_originalVariantCount;
                     SVL.variantCompiledCount += compiledShaderInfoFromEditorLog[i].editorLog_compiledVariantCount;
                     SVL.variantInCache += compiledShaderInfoFromEditorLog[i].editorLog_variantInCacheCount;
@@ -400,6 +405,7 @@ namespace GfxQA.ShaderVariantTool
             dst.editorLog_totalProcessTime += src.editorLog_totalProcessTime;
             dst.editorLog_remainingVariantCount += src.editorLog_remainingVariantCount;
             dst.editorLog_variantInCacheCount += src.editorLog_variantInCacheCount;
+            dst.dynamicVariantForThisShader += src.dynamicVariantForThisShader;
 
             return dst;
         }
