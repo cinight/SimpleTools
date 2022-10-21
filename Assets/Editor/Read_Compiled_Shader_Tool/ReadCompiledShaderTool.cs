@@ -49,7 +49,7 @@ namespace GfxQA.ReadCompiledShaderTool
             window.titleContent = new GUIContent("ReadCompiledShaderTool");
         }
 
-        public void Awake()
+        void Awake()
         {
 
         }
@@ -81,6 +81,8 @@ namespace GfxQA.ReadCompiledShaderTool
             shader = (Shader)EditorGUILayout.ObjectField(shader, typeof(Shader), true);
             if (shader != null && GUILayout.Button ("Compile shader",GUILayout.Width(200)))
             {
+                path = "";
+                CleanUpData();
                 CompileShader();
             }
 
@@ -88,7 +90,7 @@ namespace GfxQA.ReadCompiledShaderTool
             if (path != "" )
             {
                 GUI.color = Color.green;
-                GUILayout.Label ("Compiled: "+path);
+                GUILayout.Label ("Compiled: "+path , EditorStyles.wordWrappedLabel);
                 GUI.color = Color.white;
                 if(GUILayout.Button ("Open Compiled shader File",GUILayout.Width(200)))
                 {
@@ -123,24 +125,25 @@ namespace GfxQA.ReadCompiledShaderTool
             // extern internal static void OpenCompiledShader(Shader shader, int mode, int externPlatformsMask, bool includeAllVariants, bool preprocessOnly, bool stripLineDirectives);
             // extern internal static void CompileShaderForTargetCompilerPlatform(Shader shader, ShaderCompilerPlatform platform);
 
-            // const bool INCLUDE_ALL_VARIANTS = false;
-            // System.Type t = typeof(ShaderUtil);
-            // MethodInfo dynMethod = t.GetMethod("OpenCompiledShader", BindingFlags.NonPublic | BindingFlags.Static);
-            // int defaultMask = (1 << System.Enum.GetNames(typeof(UnityEditor.Rendering.ShaderCompilerPlatform)).Length - 1);
-            // dynMethod.Invoke(null, new object[] { shader, 1, defaultMask, INCLUDE_ALL_VARIANTS, false, true});
-
+            const bool INCLUDE_ALL_VARIANTS = false;
             System.Type t = typeof(ShaderUtil);
-            MethodInfo dynMethod = t.GetMethod("CompileShaderForTargetCompilerPlatform", BindingFlags.NonPublic | BindingFlags.Static);
-            dynMethod.Invoke(null, new object[] { shader, ShaderCompilerPlatform.D3D});
+            MethodInfo dynMethod = t.GetMethod("OpenCompiledShader", BindingFlags.NonPublic | BindingFlags.Static);
+            int defaultMask = (1 << System.Enum.GetNames(typeof(UnityEditor.Rendering.ShaderCompilerPlatform)).Length - 1);
+            dynMethod.Invoke(null, new object[] { shader, 1, defaultMask, INCLUDE_ALL_VARIANTS, false, true});
+
+            //This does not generate the compiled file
+            // System.Type t = typeof(ShaderUtil);
+            // MethodInfo dynMethod = t.GetMethod("CompileShaderForTargetCompilerPlatform", BindingFlags.NonPublic | BindingFlags.Static);
+            // dynMethod.Invoke(null, new object[] { shader, ShaderCompilerPlatform.D3D});
 
             //Compiled shader file stored in project Temp folder, with name e.g. Compiled-Unlit-NewUnlitShader.shader
-            path = Application.dataPath.Replace("Assets","Temp")+"/Compiled-"+shader.name.Replace("/","-").Replace(" ","")+".shader";
+            path = Application.dataPath.Replace("Assets","Temp")+"/Compiled-"+shader.name.Replace("/","-")+".shader";
             Debug.Log("Compiled Shader : "+path);
 
             ReadCompiledD3DShader(path);
         }
 
-        public void ShowData()
+        private void ShowData()
         {
             SubShaderPass selected = pList[selectedSubShaderPass];
 
@@ -325,8 +328,15 @@ namespace GfxQA.ReadCompiledShaderTool
             GUILayout.EndHorizontal();
     
         }
+        
+        private void CleanUpData()
+        {
+            sList.Clear();
+            pList.Clear();
+            pListMenu.Clear();
+        }
 
-        public void ReadCompiledD3DShader(string path)
+        private void ReadCompiledD3DShader(string path)
         {
             FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
@@ -345,9 +355,7 @@ namespace GfxQA.ReadCompiledShaderTool
             int data_countTextures = 0;
 
             //CleanUp
-            sList.Clear();
-            pList.Clear();
-            pListMenu.Clear();
+            CleanUpData();
 
             using (StreamReader sr = new StreamReader(fs))
             {
@@ -494,7 +502,7 @@ namespace GfxQA.ReadCompiledShaderTool
         }
 
         //==========HELPER===========
-        public static string ExtractString(string line, string from, string to, bool takeLastIndexOfTo = true)
+        private static string ExtractString(string line, string from, string to, bool takeLastIndexOfTo = true)
         {
             int pFrom = 0;
             if(from != "")
