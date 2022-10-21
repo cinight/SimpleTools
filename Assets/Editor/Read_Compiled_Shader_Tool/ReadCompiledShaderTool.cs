@@ -69,7 +69,8 @@ namespace GfxQA.ReadCompiledShaderTool
                 // "5. After the compiled shader code is opened, save the file to somewhere, copy the path of the file \n"+
                 // "    e.g. C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader \n"+
                 // "6. Paste the path into box below"
-                "This only works for showing D3D compiler math numbers. \n"
+                "This only works for showing D3D compiler math numbers. \n"+
+                "Compilation will include all variants, avoid shaders with a lot of keywords. \n"
             );
             //GUILayout.Space(10);
             GUI.color = Color.white;
@@ -125,7 +126,7 @@ namespace GfxQA.ReadCompiledShaderTool
             // extern internal static void OpenCompiledShader(Shader shader, int mode, int externPlatformsMask, bool includeAllVariants, bool preprocessOnly, bool stripLineDirectives);
             // extern internal static void CompileShaderForTargetCompilerPlatform(Shader shader, ShaderCompilerPlatform platform);
 
-            const bool INCLUDE_ALL_VARIANTS = false;
+            const bool INCLUDE_ALL_VARIANTS = true;
             System.Type t = typeof(ShaderUtil);
             MethodInfo dynMethod = t.GetMethod("OpenCompiledShader", BindingFlags.NonPublic | BindingFlags.Static);
             int defaultMask = (1 << System.Enum.GetNames(typeof(UnityEditor.Rendering.ShaderCompilerPlatform)).Length - 1);
@@ -299,25 +300,25 @@ namespace GfxQA.ReadCompiledShaderTool
             layoutID++;
             EditorGUILayout.LabelField("Max numbers is from this variant (Click to copy)",headerStyle,columnLayoutOption[layoutID]);
             
-            string kingText = sList[countMath_king].variant;
+            string kingText = countMath_king > 0 ? sList[countMath_king].variant : "";
             if(GUILayout.Button(kingText,kingButtonStyle,columnLayoutOption[layoutID]))
             {
                 GUIUtility.systemCopyBuffer = kingText;
             }
 
-            kingText = sList[countTmpReg_king].variant;
+            kingText = countTmpReg_king > 0 ? sList[countTmpReg_king].variant : "";
             if(GUILayout.Button(kingText,kingButtonStyle,columnLayoutOption[layoutID]))
             {
                 GUIUtility.systemCopyBuffer = kingText;
             }
 
-            kingText = sList[countBranches_king].variant;
+            kingText = countBranches_king > 0 ? sList[countBranches_king].variant : "";
             if(GUILayout.Button(kingText,kingButtonStyle,columnLayoutOption[layoutID]))
             {
                 GUIUtility.systemCopyBuffer = kingText;
             }
 
-            kingText = sList[countTextures_king].variant;
+            kingText = countTextures_king > 0 ? sList[countTextures_king].variant : "";
             if(GUILayout.Button(kingText,kingButtonStyle,columnLayoutOption[layoutID]))
             {
                 GUIUtility.systemCopyBuffer = kingText;
@@ -412,8 +413,11 @@ namespace GfxQA.ReadCompiledShaderTool
                             }
 
                             /*
+                            math -> temp registers -> textures -> branches
                             // Stats: 79 math, 7 temp registers, 33 branches
                             // Stats: 0 math, 1 textures
+                            // Stats: 2 math, 2 temp registers, 1 textures
+                            // Stats: 98 math, 11 temp registers, 1 textures, 6 branches
                             */
 
                             //DATA
@@ -424,15 +428,7 @@ namespace GfxQA.ReadCompiledShaderTool
                             string temp = ExtractString(data, ""," math",true);
                             data_countMath = int.Parse(temp);
                             data = data.Replace(data_countMath+" math, ","");
-
-                            //textures count
-                            if(data.Contains("textures"))
-                            {
-                                temp = ExtractString(data, ""," textures",true);
-                                data_countTextures = int.Parse(temp);
-                                data = data.Replace(data_countTextures+" textures, ","");
-                            }
-
+    
                             //register count
                             if(data.Contains("temp registers"))
                             {
@@ -441,12 +437,20 @@ namespace GfxQA.ReadCompiledShaderTool
                                 data = data.Replace(data_countTmpReg+" temp registers, ","");
                             }
 
+                            //textures count
+                            if(data.Contains("textures"))
+                            {
+                                temp = ExtractString(data, ""," textures",true);
+                                data_countTextures = int.Parse(temp);
+                                data = data.Replace(data_countTextures+" textures, ","");
+                            }    
+
                             //branch count
                             if(data.Contains("branches"))
                             {
                                 temp = ExtractString(data, ""," branches",true);
                                 data_countBranches = int.Parse(temp);
-                            }                       
+                            }
 
                             //Pack into struct
                             VariantCompileStat newData = new VariantCompileStat();
