@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using System.Reflection;
+using UnityEditor.Rendering;
 using System.Text;
 
 namespace GfxQA.ReadCompiledShaderTool
 {
     public class ReadCompiledShaderTool : EditorWindow
     {
-        //C:\Users\MingWaiChan\Documents\UnityProjects\_CDS\dots\Projects\HybridURPSamples\Assets\_ShaderMathCount\Compiled-Unlit-NewUnlitShader.shader
-        public string path = "C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader";
+        public string path = "";//"C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader";
+        public Shader shader;
 
         //Variant Data
         private List<VariantCompileStat> sList = new List<VariantCompileStat>();
@@ -57,28 +59,48 @@ namespace GfxQA.ReadCompiledShaderTool
             Color originalBackgroundColor = GUI.backgroundColor;
 
             //Title
-            GUI.color = Color.cyan;
+            GUI.color = Color.yellow;
             GUILayout.Label (
-                "How to use: \n"+
-                "1. Select a shader, on Inspector, click on the little triangle next to Compile and Show Code \n"+
-                "2. Select only D3D on the list \n"+
-                "3. If you want all the variants (i.e. even unused ones), untick Skip unused shader_features \n"+
-                "4. Click Compile and Show Code. It will take awhile depends on how big your shader is \n"+
-                "5. After the compiled shader code is opened, save the file to somewhere, copy the path of the file \n"+
-                "    e.g. C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader \n"+
-                "6. Paste the path into box below"
+                //"How to use: \n"+
+                // "1. Select a shader, on Inspector, click on the little triangle next to Compile and Show Code \n"+
+                // "2. Select only D3D on the list \n"+
+                // "3. If you want all the variants (i.e. even unused ones), untick Skip unused shader_features \n"+
+                // "4. Click Compile and Show Code. It will take awhile depends on how big your shader is \n"+
+                // "5. After the compiled shader code is opened, save the file to somewhere, copy the path of the file \n"+
+                // "    e.g. C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader \n"+
+                // "6. Paste the path into box below"
+                "This only works for showing D3D compiler math numbers. \n"
             );
-            GUILayout.Space(10);
+            //GUILayout.Space(10);
             GUI.color = Color.white;
 
             //path
-            path = GUILayout.TextField(path);
+            //path = GUILayout.TextField(path);
+
+            //shader file
+            shader = (Shader)EditorGUILayout.ObjectField(shader, typeof(Shader), true);
+            if (shader != null && GUILayout.Button ("Compile shader",GUILayout.Width(200)))
+            {
+                CompileShader();
+            }
+
+            //open compiled shader file
+            if (path != "" )
+            {
+                GUI.color = Color.green;
+                GUILayout.Label ("Compiled: "+path);
+                GUI.color = Color.white;
+                if(GUILayout.Button ("Open Compiled shader File",GUILayout.Width(200)))
+                {
+                    Application.OpenURL (path);
+                }
+            }
             
             //read data
-            if (path != "" && GUILayout.Button ("Read data",GUILayout.Width(200)))
-            {
-                ReadCompiledD3DShader(path);
-            }
+            // if (path != "" && GUILayout.Button ("Read data",GUILayout.Width(200)))
+            // {
+            //     ReadCompiledD3DShader(path);
+            // }
 
             GUILayout.Space(20);
 
@@ -93,6 +115,29 @@ namespace GfxQA.ReadCompiledShaderTool
             //End Window
             GUILayout.FlexibleSpace();
             EditorGUILayout.Separator();
+        }
+
+        private void CompileShader()
+        {
+            // Editor/Mono/ShaderUtil.bindings.cs
+            // extern internal static void OpenCompiledShader(Shader shader, int mode, int externPlatformsMask, bool includeAllVariants, bool preprocessOnly, bool stripLineDirectives);
+            // extern internal static void CompileShaderForTargetCompilerPlatform(Shader shader, ShaderCompilerPlatform platform);
+
+            // const bool INCLUDE_ALL_VARIANTS = false;
+            // System.Type t = typeof(ShaderUtil);
+            // MethodInfo dynMethod = t.GetMethod("OpenCompiledShader", BindingFlags.NonPublic | BindingFlags.Static);
+            // int defaultMask = (1 << System.Enum.GetNames(typeof(UnityEditor.Rendering.ShaderCompilerPlatform)).Length - 1);
+            // dynMethod.Invoke(null, new object[] { shader, 1, defaultMask, INCLUDE_ALL_VARIANTS, false, true});
+
+            System.Type t = typeof(ShaderUtil);
+            MethodInfo dynMethod = t.GetMethod("CompileShaderForTargetCompilerPlatform", BindingFlags.NonPublic | BindingFlags.Static);
+            dynMethod.Invoke(null, new object[] { shader, ShaderCompilerPlatform.D3D});
+
+            //Compiled shader file stored in project Temp folder, with name e.g. Compiled-Unlit-NewUnlitShader.shader
+            path = Application.dataPath.Replace("Assets","Temp")+"/Compiled-"+shader.name.Replace("/","-").Replace(" ","")+".shader";
+            Debug.Log("Compiled Shader : "+path);
+
+            ReadCompiledD3DShader(path);
         }
 
         public void ShowData()
