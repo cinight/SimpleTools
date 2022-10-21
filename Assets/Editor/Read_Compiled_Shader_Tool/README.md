@@ -9,3 +9,4 @@ This tool reads compiled shader code (D3D only!) and put counts and summary numb
 3. See steps on the tool.
 \
 \
+![](ReadCompiledShaderTool.JPG)

@@ -13,6 +13,7 @@ namespace GfxQA.ReadCompiledShaderTool
     {
         public string path = "";//"C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader";
         public Shader shader;
+        private bool includeAllVariants = true;
 
         //Variant Data
         private List<VariantCompileStat> sList = new List<VariantCompileStat>();
@@ -70,7 +71,7 @@ namespace GfxQA.ReadCompiledShaderTool
                 // "    e.g. C:\\Users\\XYZ\\Documents\\Compiled-ABC.shader \n"+
                 // "6. Paste the path into box below"
                 "This only works for showing D3D compiler math numbers. \n"+
-                "Compilation will include all variants, avoid shaders with a lot of keywords. \n"
+                "If you select include all variants, avoid shaders with a lot of keywords. \n"
             );
             //GUILayout.Space(10);
             GUI.color = Color.white;
@@ -80,11 +81,15 @@ namespace GfxQA.ReadCompiledShaderTool
 
             //shader file
             shader = (Shader)EditorGUILayout.ObjectField(shader, typeof(Shader), true);
-            if (shader != null && GUILayout.Button ("Compile shader",GUILayout.Width(200)))
+            if (shader != null)
             {
-                path = "";
-                CleanUpData();
-                CompileShader();
+                includeAllVariants = GUILayout.Toggle (includeAllVariants, "Include all variants?");
+                if(GUILayout.Button ("Compile shader",GUILayout.Width(200)))
+                {
+                    path = "";
+                    CleanUpData();
+                    CompileShader();
+                }
             }
 
             //open compiled shader file
@@ -126,11 +131,10 @@ namespace GfxQA.ReadCompiledShaderTool
             // extern internal static void OpenCompiledShader(Shader shader, int mode, int externPlatformsMask, bool includeAllVariants, bool preprocessOnly, bool stripLineDirectives);
             // extern internal static void CompileShaderForTargetCompilerPlatform(Shader shader, ShaderCompilerPlatform platform);
 
-            const bool INCLUDE_ALL_VARIANTS = true;
             System.Type t = typeof(ShaderUtil);
             MethodInfo dynMethod = t.GetMethod("OpenCompiledShader", BindingFlags.NonPublic | BindingFlags.Static);
             int defaultMask = (1 << System.Enum.GetNames(typeof(UnityEditor.Rendering.ShaderCompilerPlatform)).Length - 1);
-            dynMethod.Invoke(null, new object[] { shader, 1, defaultMask, INCLUDE_ALL_VARIANTS, false, true});
+            dynMethod.Invoke(null, new object[] { shader, 1, defaultMask, includeAllVariants, false, true});
 
             //This does not generate the compiled file
             // System.Type t = typeof(ShaderUtil);
