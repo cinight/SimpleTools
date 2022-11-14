@@ -90,21 +90,27 @@ namespace GfxQA.ShaderVariantTool
                 List<string[]> outputRows = new List<string[]>();
 
                 //Overview
-                int total_shaderCount = slist.Count;
-                int total_variantBeforeStripping = 0;
-                int total_variantInBuild = 0;
-                int total_variantInCache = 0;
-                int total_variantCompiled = 0;
+                uint total_shaderCount = (uint)slist.Count;
+                uint total_variantOriginalCount = 0;
+                uint total_variantAfterPrefiltering = 0;
+                uint total_variantAfterBuiltinStripping = 0;
+                uint total_variantInBuild = 0;
+                uint total_variantInCache = 0;
+                uint total_variantCompiled = 0;
                 for(int i=0; i<total_shaderCount; i++)
                 {
-                    total_variantBeforeStripping += slist[i].editorLog_originalVariantCount;
+                    total_variantOriginalCount += slist[i].editorLog_originalVariantCount;
+                    total_variantAfterPrefiltering += slist[i].editorLog_prefilteredVariantCount;
+                    total_variantAfterBuiltinStripping += slist[i].editorLog_builtinStrippedVariantCount;
                     total_variantInBuild += slist[i].editorLog_remainingVariantCount;
                     total_variantInCache += slist[i].editorLog_variantInCacheCount;
                     total_variantCompiled += slist[i].editorLog_compiledVariantCount;
                 }
                 outputRows.Add( new string[] { "Shader Count" , total_shaderCount.ToString() } );
-                outputRows.Add( new string[] { "Shader Variant Count before Stripping" , total_variantBeforeStripping.ToString() } );
-                outputRows.Add( new string[] { "Shader Variant Count in Build" , total_variantInBuild+
+                outputRows.Add( new string[] { "Shader Variant Count original" , total_variantOriginalCount.ToString() } );
+                outputRows.Add( new string[] { "Shader Variant Count after Prefiltering" , total_variantAfterPrefiltering.ToString() } );
+                outputRows.Add( new string[] { "Shader Variant Count after Builtin-Stripping" , total_variantAfterBuiltinStripping.ToString() } );
+                outputRows.Add( new string[] { "Shader Variant Count after Scriptable-Stripping" , total_variantInBuild+
                 " (cached:" + total_variantInCache + " compiled:" + total_variantCompiled +")" } );
                 outputRows.Add( new string[] { "" } );
 

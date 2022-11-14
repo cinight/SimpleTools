@@ -18,11 +18,11 @@ namespace GfxQA.ShaderVariantTool
         public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
         {
 
-            int newVariantsForThisShader = 0;
-            int dynamicVariantForThisShader = 0;
+            uint newVariantsForThisShader = 0;
+            uint dynamicVariantForThisShader = 0;
 
             //The real variant count
-            newVariantsForThisShader+=data.Count;
+            newVariantsForThisShader+=(uint)data.Count;
 
             //Go through all the variants
             for (int i = 0; i < data.Count; ++i)
@@ -103,6 +103,7 @@ namespace GfxQA.ShaderVariantTool
             if( compiledShaderId == -1 )
             {
                 CompiledShader newCompiledShader = new CompiledShader();
+                newCompiledShader.isComputeShader = false;
                 newCompiledShader.name = shader.name;
                 newCompiledShader.guiEnabled = false;
                 newCompiledShader.noOfVariantsForThisShader = 0;

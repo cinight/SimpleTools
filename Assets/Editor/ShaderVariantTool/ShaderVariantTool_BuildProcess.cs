@@ -57,7 +57,7 @@ namespace GfxQA.ShaderVariantTool
             } 
 
             //Calculate shader count by type
-            SVL.normalShaderCount = SVL.shaderlist.Count - SVL.computeShaderCount;
+            SVL.normalShaderCount = (uint)SVL.shaderlist.Count - SVL.computeShaderCount;
             SVL.variantFromShader = SVL.variantTotalCount - SVL.variantFromCompute;
 
             //Reading EditorLog
@@ -102,16 +102,18 @@ namespace GfxQA.ShaderVariantTool
             //Write Overview - Shader
             //outputRows.Add( new string[] { "Shaders ----------------------------------" } );
             outputRows.Add( new string[] { "Shader Count" , SVL.normalShaderCount.ToString() } );
-            outputRows.Add( new string[] { "Shader Variant Count before Stripping" , SVL.variantBeforeStrippingCount.ToString() } );
-            outputRows.Add( new string[] { "Shader Variant Count in Build" , SVL.variantFromShader+
+            outputRows.Add( new string[] { "Shader Variant Count original" , SVL.variantOriginalCount.ToString() } );
+            outputRows.Add( new string[] { "Shader Variant Count after Prefiltering" , SVL.variantAfterPrefilteringCount.ToString() } );
+            outputRows.Add( new string[] { "Shader Variant Count after Builtin-Stripping" , SVL.variantAfterBuiltinStrippingCount.ToString() } );
+            outputRows.Add( new string[] { "Shader Variant Count after Scriptable-Stripping" , SVL.variantFromShader+
             " (cached:" + SVL.variantInCache + " compiled:" + SVL.variantCompiledCount +")" } );
-            outputRows.Add( new string[] { "Shader Dynamic Branch variant count:" , SVL.shaderDynamicVariant.ToString() } );
+            outputRows.Add( new string[] { "Shader Dynamic Branch variant count" , SVL.shaderDynamicVariant.ToString() } );
 
             //Write Overview - Compute
             //outputRows.Add( new string[] { "ComputeShaders ----------------------------------" } );
             outputRows.Add( new string[] { "ComputeShader Count" , SVL.computeShaderCount.ToString() } );
             outputRows.Add( new string[] { "ComputeShader Variant Count in Build" , SVL.variantFromCompute.ToString() } );
-            outputRows.Add( new string[] { "ComputeShader Dynamic Branch variant count:" , SVL.computeDynamicVariant.ToString() } );
+            outputRows.Add( new string[] { "ComputeShader Dynamic Branch variant count" , SVL.computeDynamicVariant.ToString() } );
             outputRows.Add( new string[] { "" } );
 
             //Write Shader Result from Editor Log
@@ -125,7 +127,7 @@ namespace GfxQA.ShaderVariantTool
             }
 
             //Save File
-            string fileName = "ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_hh-mm-ss");
+            string fileName = "ShaderVariants_"+DateTime.Now.ToString("yyyyMMdd_HH-mm-ss");
             ShaderVariantTool.savedFile = SaveCSVFile(outputRows, fileName);
 
             //CleanUp
@@ -143,24 +145,30 @@ namespace GfxQA.ShaderVariantTool
             outputRows.Add( new string[] 
             { 
                 "Shader", 
-                "Variant Count before Stripping", 
-                "Variant in Cache",
+                "Variant Count original",
+                "Variant Count after Prefiltering", 
+                "Variant Count after Builtin-Stripping",
+                "Variant after Scriptable-Stripping", 
                 "Dynamic branch variants",
+                "Variant in Cache",
                 "Compiled Variant Count", 
-                "Variant Count in Build",
                 "Stripping+Compilation Time"
             } );
+
+            //Compute shader do not have Editor log info
+            //string computeMsg = "This is compute shader. Numbers for prefiltering and stripping is not available.";
             for(int i = 0; i <shaderlist.Count; i++)
             {
                 outputRows.Add( new string[] 
                 { 
                     shaderlist[i].name, 
-                    shaderlist[i].editorLog_originalVariantCount.ToString(),
-                    shaderlist[i].editorLog_variantInCacheCount.ToString(),
+                    shaderlist[i].isComputeShader? "-1" : shaderlist[i].editorLog_originalVariantCount.ToString(),
+                    shaderlist[i].isComputeShader? "-1" : shaderlist[i].editorLog_prefilteredVariantCount.ToString(),
+                    shaderlist[i].isComputeShader? "-1" : shaderlist[i].editorLog_builtinStrippedVariantCount.ToString(),
+                    shaderlist[i].isComputeShader? shaderlist[i].noOfVariantsForThisShader.ToString() : shaderlist[i].editorLog_remainingVariantCount.ToString(),
                     shaderlist[i].dynamicVariantForThisShader.ToString(),
-                    shaderlist[i].editorLog_compiledVariantCount.ToString(),
-                    shaderlist[i].noOfVariantsForThisShader.ToString(),
-                    //shaderlist[i].editorLog_renamingVariantCount.ToString(),
+                    shaderlist[i].isComputeShader? "-1" : shaderlist[i].editorLog_variantInCacheCount.ToString(),
+                    shaderlist[i].isComputeShader? "-1" : shaderlist[i].editorLog_compiledVariantCount.ToString(),
                     Helper.TimeFormatString( shaderlist[i].editorLog_totalProcessTime )
                 } );
             }
@@ -178,8 +186,7 @@ namespace GfxQA.ShaderVariantTool
                 sb.AppendLine(string.Join(delimiter, outputRows[index]));
             
             //Write to CSV file
-            ShaderVariantTool.folderPath = Application.dataPath.Replace("/Assets","/");
-            string savedFile = ShaderVariantTool.folderPath+fileName+".csv";
+            string savedFile = Helper.GetCSVFolderPath()+fileName+".csv";
             StreamWriter outStream = System.IO.File.CreateText(savedFile);
             outStream.WriteLine(sb);
             outStream.Close();
@@ -193,8 +200,8 @@ namespace GfxQA.ShaderVariantTool
         public static List<CompiledShader> ReadShaderCompileInfo(string startTimeStamp, string editorLogPath, bool isLogReader)
         {
             //For making sure there is no bug
-            int variantCountinBuild = 0;
-            int skippedVariantsTotalCount = 0;
+            uint variantCountinBuild = 0;
+            uint skippedVariantsTotalCount = 0;
 
             //Read EditorLog
             string fromtext = startTimeStamp;
@@ -237,24 +244,87 @@ namespace GfxQA.ShaderVariantTool
                             string programName = Helper.ExtractString(currentLine, passName+"\" (","");
                             programName = programName.Replace("\"","").Replace(")","");
 
-                            //skip the line bla bla bla prepared
-                            currentLine = sr.ReadLine();
-                            while(!currentLine.Contains("variants left after stripping, "))
+                            //Sometime the log is like this
+                            /*
+                            Compiling shader "Universal Render Pipeline/Lit" pass "ForwardLit" (fp)
+                            [2.97s] 100M / ~402M prepared
+                            [11.34s] 200M / ~402M prepared
+                            [19.22s] 300M / ~402M prepared
+                            [27.65s] 400M / ~402M prepared
+                                Full variant space:         402653184
+                                After settings filtering:   402653184
+                                After built-in stripping:   3145728
+                                After scriptable stripping: 896
+                                Processed in 28.45 seconds
+                                starting compilation...
+                                [ 61s] 360 / 896 variants ready
+                                [123s] 537 / 896 variants ready
+                                [189s] 660 / 896 variants ready
+                                [254s] 795 / 896 variants ready
+                                finished in 301.68 seconds. Local cache hits 8 (0.00s CPU time), remote cache hits 0 (0.00s CPU time), compiled 888 variants (4504.33s CPU time), skipped 0 variants
+                                Prepared data for serialisation in 0.02s
+                            */
+                            while(!currentLine.Contains("Full variant space:"))
                             {
                                 currentLine = sr.ReadLine();
                             }
 
+                            //Full variant space (variant count before prefiltering & stripping)
+                            //currentLine = sr.ReadLine();
+                            uint totalVariantInt = 0;
+                            if(currentLine.Contains("Full variant space:"))
+                            {
+                                string totalVariant = Helper.ExtractString(currentLine, "Full variant space:" , "" );
+                                totalVariant = totalVariant.Replace(" ","");
+                                totalVariantInt = uint.Parse(totalVariant);
+                            }
+
+                            //After settings filtering (variant count after prefiltering)
+                            currentLine = sr.ReadLine();
+                            uint prefilteredVariantInt = 0;
+                            if(currentLine.Contains("After settings filtering:"))
+                            {
+                                string prefilteredVariant = Helper.ExtractString(currentLine, "After settings filtering:" , "" );
+                                prefilteredVariant = prefilteredVariant.Replace(" ","");
+                                prefilteredVariantInt = uint.Parse(prefilteredVariant);
+                            }
+
+                            //After builtin stripping
+                            currentLine = sr.ReadLine();
+                            uint builtinStrippedVariantInt = 0;
+                            if(currentLine.Contains("After built-in stripping:"))
+                            {
+                                string builtinStrippedVariant = Helper.ExtractString(currentLine, "After built-in stripping:" , "" );
+                                builtinStrippedVariant = builtinStrippedVariant.Replace(" ","");
+                                builtinStrippedVariantInt = uint.Parse(builtinStrippedVariant);
+                            }
+
+                            //After scriptable stripping (final variant count in build)
+                            currentLine = sr.ReadLine(); //After scriptable stripping:
+                            uint remainingVariantInt = 0;
+                            if(currentLine.Contains("After scriptable stripping:"))
+                            {
+                                string remainingVariant = Helper.ExtractString(currentLine, "After scriptable stripping:" , "" );
+                                remainingVariant = remainingVariant.Replace(" ","");
+                                remainingVariantInt = uint.Parse(remainingVariant);
+                            }
+                            else
+                            {
+                                Debug.LogError("Cannot find line [After scriptable stripping:]. CurrentLine = "+currentLine);
+                            }
+
                             //remaining variant & stripping time
-                            string remainingVariant = Helper.ExtractString(currentLine, "" , " / " );
-                            int remainingVariantInt = int.Parse(remainingVariant);
+                            //string remainingVariant = Helper.ExtractString(currentLine, "" , " / " );
+                            //int remainingVariantInt = int.Parse(remainingVariant);
 
                             //total variant
-                            string totalVariant = Helper.ExtractString(currentLine, "/ " , " variants" );
-                            totalVariant = totalVariant.Replace(" ","");
-                            int totalVariantInt = int.Parse(totalVariant);
+                            //string totalVariant = Helper.ExtractString(currentLine, "/ " , " variants" );
+                            //totalVariant = totalVariant.Replace(" ","");
+                            //int totalVariantInt = int.Parse(totalVariant);
                             
                             //stripping time
-                            string strippingTime = Helper.ExtractString(currentLine, "variants left after stripping, processed in " , " seconds" );
+                            currentLine = sr.ReadLine();
+                            string strippingTime = Helper.ExtractString(currentLine, "Processed in " , " seconds" );
 
                             //jump to line of compilation time
                             if(remainingVariantInt > 0)
@@ -312,17 +382,20 @@ namespace GfxQA.ShaderVariantTool
                                 skippedVariants = skippedVariants.Replace(" ","");
                                 remainingText = Helper.GetRemainingString(remainingText,endString);
                             }
-                            int compiledVariantsInt = int.Parse(compiledVariants);
-                            int localCacheInt = int.Parse(localCache);
-                            int remoteCacheInt = int.Parse(remoteCache);
-                            int skippedVariantsInt = int.Parse(skippedVariants);
+                            uint compiledVariantsInt = uint.Parse(compiledVariants);
+                            uint localCacheInt = uint.Parse(localCache);
+                            uint remoteCacheInt = uint.Parse(remoteCache);
+                            uint skippedVariantsInt = uint.Parse(skippedVariants);
                             skippedVariantsTotalCount += skippedVariantsInt;
                             float strippingTimeFloat = float.Parse(strippingTime);
                             float compileTimeFloat = float.Parse(compileTime);
                             //---------- Temp object info ------------//
                             CompiledShader temp = new CompiledShader();
+                            temp.isComputeShader = false;
                             temp.name = shaderName;
                             temp.editorLog_originalVariantCount = totalVariantInt;
+                            temp.editorLog_prefilteredVariantCount = prefilteredVariantInt;
+                            temp.editorLog_builtinStrippedVariantCount = builtinStrippedVariantInt;
                             temp.editorLog_compiledVariantCount = compiledVariantsInt;
                             temp.editorLog_totalProcessTime = strippingTimeFloat+compileTimeFloat;
                             temp.editorLog_remainingVariantCount = remainingVariantInt;
@@ -369,7 +442,9 @@ namespace GfxQA.ShaderVariantTool
                     int listID = SVL.shaderlist.IndexOf(SVL.shaderlist.Find(x => x.name.Equals(compiledShaderInfoFromEditorLog[i].name)));
                     SVL.shaderlist[listID] = AccumulateToCompiledShader(compiledShaderInfoFromEditorLog[i],SVL.shaderlist[listID]);
                     //---------- For total countinvariantInCache ------------//
-                    SVL.variantBeforeStrippingCount += compiledShaderInfoFromEditorLog[i].editorLog_originalVariantCount;
+                    SVL.variantOriginalCount += compiledShaderInfoFromEditorLog[i].editorLog_originalVariantCount;
+                    SVL.variantAfterPrefilteringCount +=  compiledShaderInfoFromEditorLog[i].editorLog_prefilteredVariantCount;
+                    SVL.variantAfterBuiltinStrippingCount += compiledShaderInfoFromEditorLog[i].editorLog_builtinStrippedVariantCount;
                     SVL.variantCompiledCount += compiledShaderInfoFromEditorLog[i].editorLog_compiledVariantCount;
                     SVL.variantInCache += compiledShaderInfoFromEditorLog[i].editorLog_variantInCacheCount;
                     variantCountinBuild += compiledShaderInfoFromEditorLog[i].editorLog_remainingVariantCount; //for making sure no bug
@@ -382,7 +457,7 @@ namespace GfxQA.ShaderVariantTool
                     "Tool counted there are "+SVL.variantFromShader+" shader variants in build, "+
                     "but Editor Log counted "+variantCountinBuild+". Please contact @mingwai on slack.");
                 }
-                int variantCacheAndCompiledSum = SVL.variantInCache + SVL.variantCompiledCount + skippedVariantsTotalCount;
+                uint variantCacheAndCompiledSum = SVL.variantInCache + SVL.variantCompiledCount + skippedVariantsTotalCount;
                 if( variantCacheAndCompiledSum != variantCountinBuild)
                 {
                     Debug.LogError("ShaderVariantTool error. "+
@@ -400,6 +475,8 @@ namespace GfxQA.ShaderVariantTool
 
         private static CompiledShader AccumulateToCompiledShader(CompiledShader src, CompiledShader dst)
         {
+            dst.editorLog_builtinStrippedVariantCount += src.editorLog_builtinStrippedVariantCount;
+            dst.editorLog_prefilteredVariantCount += src.editorLog_prefilteredVariantCount;
             dst.editorLog_originalVariantCount += src.editorLog_originalVariantCount;
             dst.editorLog_compiledVariantCount += src.editorLog_compiledVariantCount;
             dst.editorLog_totalProcessTime += src.editorLog_totalProcessTime;

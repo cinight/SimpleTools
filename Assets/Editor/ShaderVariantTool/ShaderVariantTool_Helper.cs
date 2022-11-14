@@ -9,6 +9,11 @@ namespace GfxQA.ShaderVariantTool
 {
     public static class Helper
     {
+        public static string GetCSVFolderPath()
+        {
+            return Application.dataPath.Replace("/Assets","/");
+        }
+
         public static string TimeFormatString (double timeInSeconds)
         {
             float t = (float)timeInSeconds;
