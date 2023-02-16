@@ -1,8 +1,10 @@
-﻿using UnityEditor;
+﻿using System;
+using UnityEditor;
 using UnityEngine;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace GfxQA.ShaderVariantTool
 {
@@ -12,6 +14,7 @@ namespace GfxQA.ShaderVariantTool
         private int selectedTimeStamp = 0;
         private string editorLogPath = "";
         private string savedFile = "";
+        private CultureInfo culture = new CultureInfo("is-IS");
 
         [MenuItem("Window/ShaderVariantTool_LogReader")]
         public static void ShowWindow ()
@@ -53,7 +56,6 @@ namespace GfxQA.ShaderVariantTool
 
             //Width for the columns & style
             float currentSize = this.position.width;
-            float widthForEach = currentSize / (SVL.columns.Length-1+currentSize*0.0002f);
             GUIStyle background = new GUIStyle 
             { 
                 normal = 
@@ -91,10 +93,10 @@ namespace GfxQA.ShaderVariantTool
 
                 //Overview
                 uint total_shaderCount = (uint)slist.Count;
-                uint total_variantOriginalCount = 0;
-                uint total_variantAfterPrefiltering = 0;
-                uint total_variantAfterBuiltinStripping = 0;
-                uint total_variantInBuild = 0;
+                UInt64 total_variantOriginalCount = 0;
+                UInt64 total_variantAfterPrefiltering = 0;
+                UInt64 total_variantAfterBuiltinStripping = 0;
+                UInt64 total_variantInBuild = 0;
                 uint total_variantInCache = 0;
                 uint total_variantCompiled = 0;
                 for(int i=0; i<total_shaderCount; i++)
@@ -106,10 +108,9 @@ namespace GfxQA.ShaderVariantTool
                     total_variantInCache += slist[i].editorLog_variantInCacheCount;
                     total_variantCompiled += slist[i].editorLog_compiledVariantCount;
                 }
-                outputRows.Add( new string[] { "Shader Count" , total_shaderCount.ToString() } );
-                outputRows.Add( new string[] { "Shader Variant Count original" , total_variantOriginalCount.ToString() } );
-                outputRows.Add( new string[] { "Shader Variant Count after Prefiltering" , total_variantAfterPrefiltering.ToString() } );
-                outputRows.Add( new string[] { "Shader Variant Count after Builtin-Stripping" , total_variantAfterBuiltinStripping.ToString() } );
+                outputRows.Add( new string[] { "Shader Count" , total_shaderCount.ToString("N0", culture) } );
+                outputRows.Add( new string[] { "Shader Variant Count after Prefiltering" , total_variantAfterPrefiltering.ToString("N0", culture) } );
+                outputRows.Add( new string[] { "Shader Variant Count after Builtin-Stripping" , total_variantAfterBuiltinStripping.ToString("N0", culture) } );
                 outputRows.Add( new string[] { "Shader Variant Count after Scriptable-Stripping" , total_variantInBuild+
                 " (cached:" + total_variantInCache + " compiled:" + total_variantCompiled +")" } );
                 outputRows.Add( new string[] { "" } );

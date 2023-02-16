@@ -1,0 +1,42 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="ShaderVariantTool_Style.uss" />
+    <ui:ScrollView name="scrollView">
+        <ui:VisualElement class="master-content-container">
+
+            <!-- Initial message -->
+            <ui:Label class="initial-message message-label section-spacing" tabindex="-1" text="Build the player and see the variants list here." display-tooltip-when-elided="true" />
+
+            <!-- CSV buttons -->
+            <ui:VisualElement name="CSVButtons" class="section-spacing">
+                <ui:Button name="RefreshCSVButton" text="Refresh CSV File List" display-tooltip-when-elided="true" class="csv-buttons" />
+                <ui:DropdownField name="CSVDropDown" label="Select CSV File" index="0" />
+                <ui:Button name="ShowInExplorerButton" text="Show in explorer" display-tooltip-when-elided="true"  class="csv-buttons" />
+            </ui:VisualElement>
+
+            <!-- Build summary numbers -->
+            <ui:Label name="OpenedFile" class="message-label" tabindex="-1" text="Opened CSV file:" display-tooltip-when-elided="true" />
+            <ui:Label tabindex="-1" text="" display-tooltip-when-elided="false" />
+            <ui:VisualElement name="BuildSummary" class="section-spacing">
+                <ui:Label class="summary-label-content" tabindex="-1" text="Label1" display-tooltip-when-elided="true" />
+            </ui:VisualElement>
+
+            <!-- Shader table title -->
+            <ui:Label text="Variant count numbers. Click to see variant keyword table of that shader." class="message-label" />
+
+            <!-- Shader table -->
+            <ui:VisualElement class="multicolumn-container shader-table">
+                <ui:MultiColumnTreeView name="ShaderTable" virtualization-method="DynamicHeight" show-border="true" sorting-enabled="true" show-alternating-row-backgrounds="ContentOnly"  selection-type="Single">
+                    <ui:Columns name="ShaderColumns" reorderable="false">
+                        <ui:Column name="ShaderName" title="Shader Name" width="400" />
+                        <ui:Column name="Original" title="Original" width="200" />
+                        <ui:Column name="AfterPrefiltering" title="After Prefiltering" width="200" />
+                        <ui:Column name="AfterBuiltinStripping" title="After Builtin-Stripping" width="200" />
+                        <ui:Column name="AfterScriptableStripping" title="After Scriptable-Stripping" width="200" />
+                        <ui:Column name="DynamicBranch" title="Dynamic Branch" width="200" />
+                    </ui:Columns>
+                </ui:MultiColumnTreeView>
+            </ui:VisualElement>
+        
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>

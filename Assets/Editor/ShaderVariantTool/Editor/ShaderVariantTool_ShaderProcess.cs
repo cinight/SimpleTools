@@ -3,20 +3,18 @@ using UnityEditor.Build;
 using UnityEditor.Rendering;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEditor;
+
 
 namespace GfxQA.ShaderVariantTool
 {
-    class ShaderVariantTool_ComputePreprocess : IPreprocessComputeShaders
+    class ShaderVariantTool_ShaderPreprocess : IPreprocessShaders
     {
-        public ShaderVariantTool_ComputePreprocess()
-        {
-            SVL.ResetBuildList();
-        }
-
         public int callbackOrder { get { return 10; } }
 
-        public void OnProcessComputeShader(ComputeShader shader, string kernelName, IList<ShaderCompilerData> data)
+        public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
         {
+
             uint newVariantsForThisShader = 0;
             uint dynamicVariantForThisShader = 0;
 
@@ -35,10 +33,10 @@ namespace GfxQA.ShaderVariantTool
                     CompiledShaderVariant scv_default = new CompiledShaderVariant();
                     //scv.id = id;
                     scv_default.shaderName = shader.name;
-                    scv_default.kernelName = kernelName;
-                    scv_default.passName = "--";
-                    scv_default.passType = "--";
-                    scv_default.shaderType = "--";
+                    scv_default.passName = snippet.passName;
+                    scv_default.passType = snippet.passType.ToString();
+                    scv_default.shaderType = snippet.shaderType.ToString();
+                    scv_default.kernelName = "--";
                     scv_default.graphicsTier = "--";
                     scv_default.buildTarget = "--";
                     scv_default.shaderCompilerPlatform = "--";
@@ -56,16 +54,16 @@ namespace GfxQA.ShaderVariantTool
 
                     //scv.id = id;
                     scv.shaderName = shader.name;
-                    scv.kernelName = kernelName;
-                    scv.passName = "--";
-                    scv.passType = "--";
-                    scv.shaderType = "--";
-
+                    scv.passName = snippet.passName;
+                    scv.passType = snippet.passType.ToString();
+                    scv.shaderType = snippet.shaderType.ToString();
+                    scv.kernelName = "--";
+    
                     scv.graphicsTier = data[i].graphicsTier.ToString();
                     scv.buildTarget = data[i].buildTarget.ToString();
                     scv.shaderCompilerPlatform = data[i].shaderCompilerPlatform.ToString();
                     //scv.shaderRequirements = data[i].shaderRequirements.ToString().Replace(",","\n");
-                    scv.platformKeywords =Helper.GetPlatformKeywordList(data[i].platformKeywordSet);
+                    scv.platformKeywords = Helper.GetPlatformKeywordList(data[i].platformKeywordSet);
 
                     LocalKeyword lkey = new LocalKeyword(shader,sk[k].name);
                     bool isDynamic = lkey.isDynamic;
@@ -87,7 +85,7 @@ namespace GfxQA.ShaderVariantTool
                     //Just to verify API is correct
                     //string globalShaderKeywordName = ShaderKeyword.GetGlobalKeywordName(sk[k]);
                     //if( !isLocal && globalShaderKeywordName != ShaderKeyword.GetKeywordName(shader,sk[k]) ) Debug.LogError("Bug. ShaderKeyword.GetGlobalKeywordName() and  ShaderKeyword.GetKeywordName() is wrong");
-                // ShaderKeywordType globalShaderKeywordType = ShaderKeyword.GetGlobalKeywordType(sk[k]);
+                    //ShaderKeywordType globalShaderKeywordType = ShaderKeyword.GetGlobalKeywordType(sk[k]);
                     //if( !isLocal && globalShaderKeywordType != ShaderKeyword.GetKeywordType(shader,sk[k]) ) Debug.LogError("Bug. ShaderKeyword.GetGlobalKeywordType() and  ShaderKeyword.GetKeywordType() is wrong");
                 }
 
@@ -102,13 +100,12 @@ namespace GfxQA.ShaderVariantTool
             if( compiledShaderId == -1 )
             {
                 CompiledShader newCompiledShader = new CompiledShader();
-                newCompiledShader.isComputeShader = true;
+                newCompiledShader.isComputeShader = false;
                 newCompiledShader.name = shader.name;
                 newCompiledShader.guiEnabled = false;
                 newCompiledShader.noOfVariantsForThisShader = 0;
                 newCompiledShader.dynamicVariantForThisShader = 0;
                 SVL.shaderlist.Add(newCompiledShader);
-                SVL.computeShaderCount++;
                 compiledShaderId=SVL.shaderlist.Count-1;
             }
 
@@ -120,8 +117,21 @@ namespace GfxQA.ShaderVariantTool
 
             //Add to total count
             SVL.variantTotalCount+=newVariantsForThisShader;
-            SVL.variantFromCompute+=newVariantsForThisShader;
-            SVL.computeDynamicVariant+=dynamicVariantForThisShader;
+            SVL.shaderDynamicVariant+=dynamicVariantForThisShader;
+        }
+    }
+
+    class ShaderVariantTool_ShaderPreprocess_TimeLogging : IPreprocessShaders
+    {
+        public ShaderVariantTool_ShaderPreprocess_TimeLogging()
+        {
+            SVL.ResetBuildList();       
+        }
+
+        public int callbackOrder { get { return -100; } }
+
+        public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data)
+        {
         }
     }
 }

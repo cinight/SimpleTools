@@ -1,0 +1,31 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="ShaderVariantTool_Style.uss" />
+    <ui:VisualElement class="VariantTemplate">
+
+        <!-- Shader summary numbers -->
+        <ui:VisualElement name="ShaderSummary">
+            <ui:Label text="" />
+            <ui:Label class="summary-label-content" tabindex="-1" text="Label1" display-tooltip-when-elided="true" />
+        </ui:VisualElement>
+
+        <!-- Variant table -->
+        <ui:VisualElement class="multicolumn-container variant-table">
+            <ui:MultiColumnListView name="VariantTable" virtualization-method="DynamicHeight" show-border="true" sorting-enabled="false" show-alternating-row-backgrounds="ContentOnly" selection-type="None">
+                <ui:Columns name="VariantColumns" reorderable="false">
+                    <ui:Column name="CompiledCount" title="Compiled Count" width="110px" />
+                    <ui:Column name="KeywordName" title="Keyword Name" width="200px" />
+                    <ui:Column name="PassName" title="Pass Name" width="150px" />
+                    <ui:Column name="ShaderType" title="Shader Type" width="100px" />
+                    <ui:Column name="PassType" title="Pass Type" width="150px" />
+                    <ui:Column name="KernelName" title="Kernel Name" width="150px" />
+                    <ui:Column name="GfxTier" title="Gfx Tier" width="60px" />
+                    <ui:Column name="BuildTarget" title="Build Target" width="150px" />
+                    <ui:Column name="CompilerPlatform" title="Compiler Platform" width="130px" />
+                    <ui:Column name="PlatformKeywords" title="Platform Keywords" width="150px" />
+                    <ui:Column name="KeywordType" title="Keyword Type" width="120px" />
+                </ui:Columns>
+            </ui:MultiColumnListView>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>
