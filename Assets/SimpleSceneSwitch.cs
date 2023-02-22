@@ -7,7 +7,7 @@ public class SimpleSceneSwitch : MonoBehaviour
 {
     public float scale = 1f;
 
-    private float fontSize = 16;
+    private int fontSize = 16;
     private GUIStyle customButton;
     private float w = 0;
     private float h = 0;
