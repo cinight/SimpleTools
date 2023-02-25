@@ -21,7 +21,7 @@ public class SimpleSceneSwitch : MonoBehaviour
     {
         //Setup styles
         fontSize = Mathf.RoundToInt ( 16 * scale );
-        customButton = customButton = new GUIStyle("button");
+        customButton = new GUIStyle("button");
         customButton.fontSize = fontSize;
         w = 410 * scale;
         h = 90 * scale;
