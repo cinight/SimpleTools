@@ -4,6 +4,9 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using System;
 using System.IO;
+using System.Globalization;
+using System.Linq;
+using UnityEditor;
 
 namespace GfxQA.ShaderVariantTool
 {
@@ -14,8 +17,41 @@ namespace GfxQA.ShaderVariantTool
             return Application.dataPath.Replace("/Assets","/");
         }
 
+        private static string culturePref = "ShaderVariantTool_Culture";
+        public static CultureInfo culture;
+        public static List<CultureInfo> cinfo;
+
+        public static void SetupCultureInfo()
+        {
+            if(cinfo == null) cinfo = CultureInfo.GetCultures(CultureTypes.AllCultures & ~CultureTypes.NeutralCultures).ToList<CultureInfo>();
+            string cultureString = EditorPrefs.GetString(culturePref,"English (United States)");
+            if(culture == null ) culture = cinfo.Find(x => x.DisplayName == cultureString);
+        }
+
+        public static void UpdateCultureInfo(string displayName)
+        {
+            EditorPrefs.SetString(culturePref,displayName);
+            culture = cinfo.Find(x => x.DisplayName == displayName);
+        }
+
+        public static string NumberSeperator(string input)
+        {
+            UInt64 outNum = 0;
+            bool success = UInt64.TryParse(input, out outNum);
+            if(success)
+            {
+                return outNum.ToString("N0", culture);
+            }
+            else
+            {
+                return input;
+            }
+        }
+
         public static string TimeFormatString (double timeInSeconds)
         {
+            SetupCultureInfo();
+
             float t = (float)timeInSeconds;
 
             float hour = t / 3600f;
@@ -32,7 +68,7 @@ namespace GfxQA.ShaderVariantTool
 
             if(hour > 0) timeString += hour + "hr ";
             if(minute > 0) timeString += minute + "m ";
-            timeString += second.ToString("0.0") + "s";
+            timeString += NumberSeperator(second.ToString()) + "s";
 
             return timeString;
         }

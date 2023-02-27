@@ -10,17 +10,21 @@
 
         <!-- Variant table -->
         <ui:VisualElement class="multicolumn-container variant-table">
+            <ui:Label name="CollectionSize" text="Number of items" />
             <ui:MultiColumnListView name="VariantTable" virtualization-method="DynamicHeight" show-border="true" sorting-enabled="false" show-alternating-row-backgrounds="ContentOnly" selection-type="None">
                 <ui:Columns name="VariantColumns" reorderable="false">
-                    <ui:Column name="CompiledCount" title="Compiled Count" width="110px" />
-                    <ui:Column name="KeywordName" title="Keyword Name" width="200px" />
+                    <ui:Column name="ShaderName" title="Shader Name" width="130px" />
+                    <ui:Column name="CompiledCountBefore" title="Compiled Count \nBefore Scriptable \nStripping" width="130px" />
+                    <ui:Column name="CompiledCountAfter" title="Compiled Count \nAfter Scriptable \nStripping" width="130px" />
+                    <ui:Column name="KeywordName" title="Keyword Name" width="300px" />
+                    <ui:Column name="DeclareType" title="Declare Type" width="200px" />
                     <ui:Column name="PassName" title="Pass Name" width="150px" />
                     <ui:Column name="ShaderType" title="Shader Type" width="100px" />
                     <ui:Column name="PassType" title="Pass Type" width="150px" />
                     <ui:Column name="KernelName" title="Kernel Name" width="150px" />
-                    <ui:Column name="GfxTier" title="Gfx Tier" width="60px" />
+                    <ui:Column name="GfxTier" title="Gfx \nTier" width="50px" />
                     <ui:Column name="BuildTarget" title="Build Target" width="150px" />
-                    <ui:Column name="CompilerPlatform" title="Compiler Platform" width="130px" />
+                    <ui:Column name="CompilerPlatform" title="Compiler \nPlatform" width="80px" />
                     <ui:Column name="PlatformKeywords" title="Platform Keywords" width="150px" />
                     <ui:Column name="KeywordType" title="Keyword Type" width="120px" />
                 </ui:Columns>

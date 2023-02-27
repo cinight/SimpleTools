@@ -85,38 +85,8 @@ namespace GfxQA.ShaderVariantTool
             //Read log and save the CSV file
             if (GUILayout.Button ("Read log",GUILayout.Width(200)))
             {
-                //ReadLog
-                List<CompiledShader> slist = ShaderVariantTool_BuildPostprocess.ReadShaderCompileInfo(timeStamps[selectedTimeStamp],editorLogPath,true);
-
-                //Prepare CSV string
-                List<string[]> outputRows = new List<string[]>();
-
-                //Overview
-                uint total_shaderCount = (uint)slist.Count;
-                UInt64 total_variantOriginalCount = 0;
-                UInt64 total_variantAfterPrefiltering = 0;
-                UInt64 total_variantAfterBuiltinStripping = 0;
-                UInt64 total_variantInBuild = 0;
-                uint total_variantInCache = 0;
-                uint total_variantCompiled = 0;
-                for(int i=0; i<total_shaderCount; i++)
-                {
-                    total_variantOriginalCount += slist[i].editorLog_originalVariantCount;
-                    total_variantAfterPrefiltering += slist[i].editorLog_prefilteredVariantCount;
-                    total_variantAfterBuiltinStripping += slist[i].editorLog_builtinStrippedVariantCount;
-                    total_variantInBuild += slist[i].editorLog_remainingVariantCount;
-                    total_variantInCache += slist[i].editorLog_variantInCacheCount;
-                    total_variantCompiled += slist[i].editorLog_compiledVariantCount;
-                }
-                outputRows.Add( new string[] { "Shader Count" , total_shaderCount.ToString("N0", culture) } );
-                outputRows.Add( new string[] { "Shader Variant Count after Prefiltering" , total_variantAfterPrefiltering.ToString("N0", culture) } );
-                outputRows.Add( new string[] { "Shader Variant Count after Builtin-Stripping" , total_variantAfterBuiltinStripping.ToString("N0", culture) } );
-                outputRows.Add( new string[] { "Shader Variant Count after Scriptable-Stripping" , total_variantInBuild+
-                " (cached:" + total_variantInCache + " compiled:" + total_variantCompiled +")" } );
-                outputRows.Add( new string[] { "" } );
-
-                //Info for each shader
-                outputRows = ShaderVariantTool_BuildPostprocess.AddEditorLogShaderInfo(outputRows,slist);
+                //Write File
+                List<string[]> outputRows = ShaderVariantTool_BuildPostprocess.WriteCSVFile(null,editorLogPath,timeStamps[selectedTimeStamp]);
 
                 //Save File
                 string fileName = "ShaderVariant_ReadLog_"+timeStamps[selectedTimeStamp].Replace(SVL.buildProcessIDTitleStart,"");

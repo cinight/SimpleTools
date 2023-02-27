@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System;
 using System.IO;
+using System.Globalization;
 
 namespace GfxQA.ShaderVariantTool
 {
@@ -15,43 +16,60 @@ namespace GfxQA.ShaderVariantTool
         [MenuItem("Window/ShaderVariantTool")]
         public static void ShowWindow()
         {
-            ShaderVariantTool wnd = GetWindow<ShaderVariantTool>();
+            //ShaderVariantTool wnd = GetWindow<ShaderVariantTool>();
+            ShaderVariantTool wnd = CreateWindow<ShaderVariantTool>(); //Allow to create more instances
             wnd.titleContent = new GUIContent("ShaderVariantTool");
             wnd.minSize = new Vector2(800, 700);
         }
 
         public void CreateGUI()
         {
-            //Getting main layout
             root = rootVisualElement;
-            VisualTreeAsset rootVisualTree = Resources.Load<VisualTreeAsset>("ShaderVariantTool_Main");
-            rootVisualTree.CloneTree(root);
-
-            //CSV buttons ==================================================================
-
-            if(CSVFileNames == null) GetCSVFileNames();
 
             //If there is no CSV file available, show an message to hint people to make a build first
-            VisualElement initialMessage = root.Q<VisualElement>(className:"initial-message");
+            if(CSVFileNames == null) GetCSVFileNames();
             if(CSVFileNames.Count == 0)
             {
-                initialMessage.style.display = DisplayStyle.Flex;
+                root.styleSheets.Add(Resources.Load<StyleSheet>("ShaderVariantTool_Style"));
+                Label initialMessage = new Label("Build the player and reopen this tool.");
+                initialMessage.AddToClassList("initial-message");
+                root.Add(initialMessage);
                 return;
             }
-            else
+
+            //Culture Setting ==================================================================
+
+            //Getting main layout
+            VisualTreeAsset rootVisualTree = Resources.Load<VisualTreeAsset>("ShaderVariantTool_Main");
+            rootVisualTree.CloneTree(root);
+            ScrollView mainScrollView = root.Q<ScrollView>();
+
+            //Culture Setting ==================================================================
+
+            //Read culture pref
+            Helper.SetupCultureInfo();
+
+            //DropdownList
+            DropdownField cultureDropdown = root.Q<DropdownField>(name:"CultureField");
+            cultureDropdown.choices = Helper.cinfo.Select(i => i.DisplayName).ToList();
+            cultureDropdown.index = Helper.cinfo.IndexOf(Helper.culture);
+            cultureDropdown.RegisterValueChangedCallback(v =>
             {
-                initialMessage.style.display = DisplayStyle.None;
-            }
+                Helper.UpdateCultureInfo(v.newValue);
+            });
+
+            //CSV buttons ==================================================================
 
             //Refresh CSV button
             Button refreshCSVButton = root.Q<Button>(name:"RefreshCSVButton");
             refreshCSVButton.RegisterCallback<PointerUpEvent>(e =>
             {
                 GetCSVFileNames();
+                csvDropDown.choices = CSVFileNames;
             });
 
             //CSV drop down list
-            DropdownField csvDropDown = root.Q<DropdownField>(name:"CSVDropDown");
+            csvDropDown = root.Q<DropdownField>(name:"CSVDropDown");
             csvDropDown.choices = CSVFileNames;
             if(csvDropDown.index < 0)
             {
@@ -89,6 +107,25 @@ namespace GfxQA.ShaderVariantTool
 
             shaderTable = root.Q<MultiColumnTreeView>(name: "ShaderTable");
 
+            /* When many shader rows are expanded, the shader table creates the scroll bar, which can't be disabled.
+               Then the scrolling will happen inside the shadertable, if expanding/collapsing some items which is culled by the scroll,
+               bug happens
+            */
+            ScrollView shaderTableScrollView = shaderTable.Q<ScrollView>();
+            shaderTableScrollView.mode = ScrollViewMode.Vertical;
+            shaderTableScrollView.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            shaderTableScrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            shaderTableScrollView.RegisterCallback<WheelEvent>(e =>
+            {
+                Vector2 scollDelta = new Vector2(e.delta.x,e.delta.y);
+                if(scollDelta.y > 0)
+                {
+                    scollDelta.y *= 20f;
+                }
+                mainScrollView.scrollOffset += scollDelta;
+                shaderTableScrollView.scrollOffset = Vector2.zero;
+            });
+
             //Set cell data
             SetShaderRootItems();
 
@@ -101,7 +138,8 @@ namespace GfxQA.ShaderVariantTool
                 shaderTable.columns[i].bindCell = (VisualElement element, int index) =>
                 {
                     int actualcolumn = colid % shaderTableColumns.Count;
-                    (element as Label).text = shaderTable.GetItemDataForIndex<string[]>(index)[actualcolumn];
+                    string content = shaderTable.GetItemDataForIndex<string[]>(index)[actualcolumn];
+                    (element as Label).text = Helper.NumberSeperator(content);
                     colid++;
                 };
             }
@@ -135,7 +173,7 @@ namespace GfxQA.ShaderVariantTool
                 //Fill the table
                 if( buildRows[i][0] !="Build Path" )//Do not show build path
                 {
-                    combinedBuildRowsText += String.Format( format, buildRows[i][0], NumberSeperator(buildRows[i][1]) );
+                    combinedBuildRowsText += String.Format( format, buildRows[i][0], Helper.NumberSeperator(buildRows[i][1]) );
                     combinedBuildRowsText += "\n";
                 }
             }
@@ -177,11 +215,11 @@ namespace GfxQA.ShaderVariantTool
         }
     
 #region CSV file reading functions
-
-        public static string savedFile = "";
+    
         private List<string> CSVFileNames;
         private string selectedCSVFile = "";
         private string prevSelectedCSVFile = "";
+        private DropdownField csvDropDown;
 
         private Label openedFileLabel;
 
@@ -220,20 +258,6 @@ namespace GfxQA.ShaderVariantTool
         private string[] GetLineCells(string[] lines, int lineID)
         {
             return lines[lineID].Trim().Split(","[0]);
-        }
-
-        private string NumberSeperator(string input)
-        {
-            int outNum = 0;
-            bool success = int.TryParse(input, out outNum);
-            if(success)
-            {
-                return outNum.ToString("N0");
-            }
-            else
-            {
-                return input;
-            }
         }
 
         void UpdateCSVDataForGUI()
@@ -314,7 +338,8 @@ namespace GfxQA.ShaderVariantTool
                 }
 
                 //Sort variant list by compile count
-                variantRows = variantRows.OrderByDescending(o=>int.Parse(o[defaultVariantSortColumn])).ToList();
+                //variantRows = variantRows.OrderByDescending(o=>int.Parse(o[defaultVariantSortColumn])).ToList();
+                variantRows = variantRows.OrderByDescending(o=>int.Parse(o[defaultVariantSortColumn])).ThenBy(o=>o[3]).ToList();
 
                 Debug.Log("ShaderVariantTool - successfully loaded "+selectedCSVFile);
             }
@@ -356,12 +381,14 @@ namespace GfxQA.ShaderVariantTool
             {
                 int rowId = shaderTable.GetIdForIndex(i);
                 bool rowIsRoot = rootIds.Contains(rowId);
-                if(rowIsRoot)
+                if(rowIsRoot && shaderTable.IsExpanded(rowId))
                 {
-                    if(shaderTable.IsExpanded(rowId))
-                    {
-                        listOfExpandedItems.Add(i);
-                    }
+                    rows.ElementAt(i).AddToClassList("shader-table-selected");
+                    listOfExpandedItems.Add(i);
+                }
+                else
+                {
+                    rows.ElementAt(i).RemoveFromClassList("shader-table-selected");
                 }
             }
             shaderTable.SetSelectionWithoutNotify(listOfExpandedItems);
@@ -450,7 +477,7 @@ namespace GfxQA.ShaderVariantTool
 #region Variant table variables
 
         private List<string[]> variantRows;
-        private int defaultVariantSortColumn = 1; //Sorting default is no. variant after stripping (i.e. variant in build)
+        private int defaultVariantSortColumn = 2; //Sorting default is no. variant after stripping (i.e. variant in build)
         private List<VisualElement> expandedVariantElements;
 
         private void ResetExpandedVariantElementsList()
@@ -562,13 +589,13 @@ namespace GfxQA.ShaderVariantTool
                         }
 
                         //Hide the shader variant cells
-                        for(int k=1; k<shaderRowElement.childCount; k++)
-                        {
-                            var shaderCell = shaderRowElement.Children().ElementAt(k);
-                            Label shaderCellLabel = shaderCell.Q<Label>();
-                            shaderCellLabel.style.visibility = Visibility.Hidden;
+                        // for(int k=1; k<shaderRowElement.childCount; k++)
+                        // {
+                        //     var shaderCell = shaderRowElement.Children().ElementAt(k);
+                        //     Label shaderCellLabel = shaderCell.Q<Label>();
+                        //     shaderCellLabel.style.visibility = Visibility.Hidden;
                             
-                        }
+                        // }
 
                         //Show variant table
                         AddVariantTable(expandedRowElement,rowId);
@@ -621,13 +648,10 @@ namespace GfxQA.ShaderVariantTool
                 //Show the shader summary numbers
                 VisualElement shaderSummaryElement = variantTableTemplate.Q<VisualElement>(name:"ShaderSummary");
                 Columns shaderTableColumns = shaderTable.columns;
-                    //Debug
-                    //Label shaderNameLabel = new Label(shaderName);
-                    //shaderSummaryElement.Add(shaderNameLabel);
                 string combinedShaderSummaryText = shaderName + "\n";
                 for(int j=1;j<shaderTableColumns.Count;j++)
                 {
-                    combinedShaderSummaryText += String.Format( format, "Variant Count " + shaderTableColumns[j].title, NumberSeperator(shaderRows[shaderRowsId][j]) );
+                    combinedShaderSummaryText += String.Format( format, "Variant Count " + shaderTableColumns[j].title, Helper.NumberSeperator(shaderRows[shaderRowsId][j]) );
                     combinedShaderSummaryText += "\n";
                 }
                 Label label_summary = shaderSummaryElement.Q<Label>(className:"summary-label-content");
@@ -638,16 +662,53 @@ namespace GfxQA.ShaderVariantTool
                 {
                     MultiColumnListView variantTable = variantTableTemplate.Q<MultiColumnListView>(name: "VariantTable");
 
+                    //Hide some columns based on shader type
+                    string isComputeShader = shaderRows[shaderRowsId][10]; //get num from BuildProcess
+                    List<string> columnsToHide = new List<string>();
+                    if(isComputeShader == "True")
+                    {
+                        columnsToHide.Add("ShaderName");
+                        columnsToHide.Add("PassName");
+                        columnsToHide.Add("PassType");
+                        columnsToHide.Add("ShaderType");
+                    }
+                    else
+                    {
+                        columnsToHide.Add("ShaderName");
+                        columnsToHide.Add("KernelName");
+                    }
+
                     //Find all the variants belongs to this shader
                     var variantRoots = new List<string[]>();
                     for(int k=0; k<variantRows.Count; k++)
                     {
                         if(variantRows[k][0] == shaderName)
                         {
-                            variantRoots.Add(variantRows[k]);
+                            //Skip the column data we want to hide
+                            List<string> data = new List<string>();
+                            for (int j=0; j<variantRows[k].Length; j++)
+                            {
+                                string colName = variantTable.columns[j].name;
+                                if( !columnsToHide.Contains(colName) )
+                                {
+                                    data.Add(variantRows[k][j]);
+                                }
+                            }
+                            variantRoots.Add(data.ToArray());
                         }
                     }
                     variantTable.itemsSource = variantRoots;
+
+                    //Hide some columns based on shader type
+                    foreach(string col in columnsToHide)
+                    {
+                        variantTable.columns.Remove(variantTable.columns.First(o => o.name == col));
+                    }
+
+                    //Collection size of variant table
+                    Label numOfItems = variantTableTemplate.Q<Label>(name: "CollectionSize");
+                    numOfItems.text = "No. of items: "+ variantRoots.Count;
+                    
 
                     //Bind cell data to column
                     Columns variantTableColumns = variantTable.columns;
@@ -658,7 +719,8 @@ namespace GfxQA.ShaderVariantTool
                         variantTable.columns[i].bindCell = (VisualElement element, int index) =>
                         {
                             int actualcolumn = colid % variantTableColumns.Count;
-                            (element as Label).text = variantRoots[index][actualcolumn + 1]; //first column is shader name
+                            string content = variantRoots[index][actualcolumn];
+                            (element as Label).text = Helper.NumberSeperator(content);
                             colid++;
                         };
                     }
@@ -782,39 +844,9 @@ namespace GfxQA.ShaderVariantTool
 
         //the big total
         public static double buildTime = 0;
-        public static string buildTimeString = "";
-        public static double prepareTime = 0;
-        public static string prepareTimeString = "";
-        public static double strippingTime = 0;
-        public static string strippingTimeString = "";
-        public static double compileTime = 0;
-        public static string compileTimeString = "";
-        public static uint compiledTotalCount = 0; //The number of data that the tool processed
-        public static uint variantTotalCount = 0; //shader variant count + compute variant count
-
-        //shader variant
-        public static UInt64 variantOriginalCount = 0;
-        public static UInt64 variantAfterPrefilteringCount = 0;
-        public static UInt64 variantAfterBuiltinStrippingCount = 0;
-        public static uint variantCompiledCount = 0;
-        public static uint variantInCache = 0;
-        public static uint normalShaderCount = 0;
-        public static uint variantFromShader = 0;
-        public static uint shaderDynamicVariant = 0; //This will always hit shadercache == will not compile
-
-        //compute shader variant
-        public static uint variantFromCompute = 0;
-        public static uint computeShaderCount = 0;
-        public static uint computeDynamicVariant = 0; //This will always hit shadercache == will not compile
-
-        //invalid or disabled keywords for final error logging
-        public static string invalidKey = "";
-        public static string disabledKey = "";
         
         //data
-        public static List<CompiledShaderVariant> variantlist = new List<CompiledShaderVariant>();
-        public static List<CompiledShader> shaderlist = new List<CompiledShader>();
-        public static List<string[]> rowData = new List<string[]>();
+        public static List<ShaderItem> shaderlist = new List<ShaderItem>();
         public static string[] columns;
         
         public static void ReadUXMLForColumns()
@@ -841,28 +873,7 @@ namespace GfxQA.ShaderVariantTool
                 ReadUXMLForColumns();
 
                 shaderlist.Clear();
-                variantlist.Clear();
                 buildTime = 0;
-                buildTimeString = "";
-                prepareTime = 0;
-                prepareTimeString = "";
-                strippingTime = 0;
-                strippingTimeString = "";
-                compileTime = 0;
-                compileTimeString = "";
-                compiledTotalCount = 0;
-                variantTotalCount = 0;
-                variantOriginalCount = 0;
-                variantAfterPrefilteringCount = 0;
-                variantAfterBuiltinStrippingCount = 0;
-                variantCompiledCount = 0;
-                variantInCache = 0;
-                variantFromCompute = 0;
-                variantFromShader = 0;
-                computeShaderCount = 0;
-                normalShaderCount = 0;
-                shaderDynamicVariant = 0;
-                computeDynamicVariant = 0;
 
                 //For reading EditorLog, we can extract the contents
                 buildProcessID = System.DateTime.Now.ToString("yyyyMMdd_HH-mm-ss");
@@ -872,116 +883,6 @@ namespace GfxQA.ShaderVariantTool
                 buildProcessStarted = true;
             }
         }
-
-        public static void Sorting()
-        {
-            //sort the list according to shader name
-            variantlist = variantlist.OrderBy(o=>o.shaderName).ThenBy(o=>o.shaderType).ThenBy(o=>o.shaderKeywordName).ToList();
-
-            //Unique item and duplicate counts
-            Dictionary<CompiledShaderVariant, int> uniqueSet = new Dictionary<CompiledShaderVariant, int>();
-
-            //count duplicates
-            for(int i=0; i<variantlist.Count; i++)
-            {
-                //is a duplicate
-                if( uniqueSet.ContainsKey(variantlist[i]) )
-                {
-                    //add to duplicate count
-                    uniqueSet[variantlist[i]]++;
-                }
-                //new unique item
-                else
-                {
-                    //add to unique list
-                    uniqueSet.Add(variantlist[i],1);
-                }
-            }
-
-            //remove duplicates
-            variantlist = variantlist.Distinct().ToList();
-
-            //make string lists
-            rowData.Clear();
-
-            ReadUXMLForColumns();
-            rowData.Add(columns);
-            for(int k=0; k < variantlist.Count; k++)
-            {
-                rowData.Add(new string[] {
-                    variantlist[k].shaderName,
-                    uniqueSet[variantlist[k]].ToString(),
-                    variantlist[k].shaderKeywordName,
-                    variantlist[k].passName,
-                    variantlist[k].shaderType,
-                    variantlist[k].passType,
-                    variantlist[k].kernelName,
-                    variantlist[k].graphicsTier,
-                    variantlist[k].buildTarget,
-                    variantlist[k].shaderCompilerPlatform,
-                    //variantlist[k].shaderRequirements,
-                    variantlist[k].platformKeywords,
-                    variantlist[k].shaderKeywordType,
-                    //variantlist[k].shaderKeywordIndex,
-                    //variantlist[k].isShaderKeywordValid,
-                    //variantlist[k].isShaderKeywordEnabled,
-                });
-            }
-
-            //clean up
-            variantlist.Clear();
-        }
-
-
     }
-
-    //===================================================================================================
-    public struct CompiledShader
-    {
-        public bool isComputeShader;
-        public string name;
-        public bool guiEnabled;
-        public uint noOfVariantsForThisShader;
-        public uint dynamicVariantForThisShader;
-        public UInt64 editorLog_originalVariantCount;
-        public UInt64 editorLog_prefilteredVariantCount;
-        public UInt64 editorLog_builtinStrippedVariantCount;
-        public UInt64 editorLog_remainingVariantCount;
-        public uint editorLog_compiledVariantCount;
-        public uint editorLog_variantInCacheCount;
-        public float editorLog_timeCompile;
-        public float editorLog_timeStripping;
-    };
-    public struct CompiledShaderVariant
-    {
-        //shader
-        public string shaderName;
-
-        //snippet
-        public string passType;
-        public string passName;
-        public string shaderType;
-
-        //compute kernel
-        public string kernelName;
-
-        //data
-        public string graphicsTier;
-        public string buildTarget; 
-        public string shaderCompilerPlatform;
-        //public string shaderRequirements;
-
-        //data - PlatformKeywordSet
-        public string platformKeywords;
-        //public string isplatformKeywordEnabled; //from PlatformKeywordSet
-
-        //data - ShaderKeywordSet
-        public string shaderKeywordName; //ShaderKeyword.GetKeywordName
-        public string shaderKeywordType; //ShaderKeyword.GetKeywordType
-        //public string shaderKeywordIndex; //ShaderKeyword.index
-        //public string isShaderKeywordValid; //from ShaderKeyword.IsValid()
-        //public string isShaderKeywordEnabled; //from ShaderKeywordSet
-    };
-
 }
 

@@ -3,8 +3,10 @@
     <ui:ScrollView name="scrollView">
         <ui:VisualElement class="master-content-container">
 
-            <!-- Initial message -->
-            <ui:Label class="initial-message message-label section-spacing" tabindex="-1" text="Build the player and see the variants list here." display-tooltip-when-elided="true" />
+            <!-- Culture setting -->
+            <ui:VisualElement name="CultureSetting">
+                <ui:DropdownField name="CultureField" label="culture" index="0" />
+            </ui:VisualElement>
 
             <!-- CSV buttons -->
             <ui:VisualElement name="CSVButtons" class="section-spacing">

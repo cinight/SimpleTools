@@ -3,11 +3,24 @@
     padding-bottom: 30px;
 }
 
+.initial-message
+{
+    padding: 10px;
+}
+
 .message-label, .initial-message
 {
     padding-left: 10px;
     -unity-font-style: bold;
     color: aqua;
+}
+
+/* Culture setting styles ============================================== */
+
+#CultureField
+{
+    width: 300px;
+    padding-bottom: 10px;
 }
 
 /* CSV button styles ============================================== */
@@ -47,19 +60,25 @@
     padding-left: 10px;
 }
 
-.expanded-row
+.expanded-row, #CollectionSize
 {
     background-color: rgb(46,46,46);
 }
 
-.shader-table .unity-collection-view__item--selected
+.shader-table .shader-table-selected
 {
     /* background-color: var(--unity-colors-alternated_rows-background); */
     background-color: rgb(40,60,60);
     color: aqua;
+    -unity-font-style: bold;
 }
 
 /* shader table styles ============================================== */
+
+.shader-table
+{
+    width: 99%;
+}
 
 .shader-table, .variant-table
 {
