@@ -12,6 +12,7 @@ namespace GfxQA.ShaderVariantTool
     public class ShaderVariantTool : EditorWindow
     {
         private VisualElement root;
+        private ScrollView mainScrollView;
 
         [MenuItem("Window/ShaderVariantTool")]
         public static void ShowWindow()
@@ -42,7 +43,7 @@ namespace GfxQA.ShaderVariantTool
             //Getting main layout
             VisualTreeAsset rootVisualTree = Resources.Load<VisualTreeAsset>("ShaderVariantTool_Main");
             rootVisualTree.CloneTree(root);
-            ScrollView mainScrollView = root.Q<ScrollView>();
+            mainScrollView = root.Q<ScrollView>();
 
             //Culture Setting ==================================================================
 
@@ -105,51 +106,8 @@ namespace GfxQA.ShaderVariantTool
 
             //Shader table ===================================================================
 
-            shaderTable = root.Q<MultiColumnTreeView>(name: "ShaderTable");
-
-            /* When many shader rows are expanded, the shader table creates the scroll bar, which can't be disabled.
-               Then the scrolling will happen inside the shadertable, if expanding/collapsing some items which is culled by the scroll,
-               bug happens
-            */
-            ScrollView shaderTableScrollView = shaderTable.Q<ScrollView>();
-            shaderTableScrollView.mode = ScrollViewMode.Vertical;
-            shaderTableScrollView.verticalScrollerVisibility = ScrollerVisibility.Hidden;
-            shaderTableScrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            shaderTableScrollView.RegisterCallback<WheelEvent>(e =>
-            {
-                Vector2 scollDelta = new Vector2(e.delta.x,e.delta.y);
-                if(scollDelta.y > 0)
-                {
-                    scollDelta.y *= 20f;
-                }
-                mainScrollView.scrollOffset += scollDelta;
-                shaderTableScrollView.scrollOffset = Vector2.zero;
-            });
-
-            //Set cell data
-            SetShaderRootItems();
-
-            //Bind cell data to column
-            Columns shaderTableColumns = shaderTable.columns;
-            int colid = 0; //cannot use i inside bindCell as it is always = column count. colid will be increment to columnCount * shaderRowsCount
-            for(int i=0; i<shaderTableColumns.Count; i++)
-            {
-                shaderTable.columns[i].makeCell = () => CreateShaderTableCellLabel();
-                shaderTable.columns[i].bindCell = (VisualElement element, int index) =>
-                {
-                    int actualcolumn = colid % shaderTableColumns.Count;
-                    string content = shaderTable.GetItemDataForIndex<string[]>(index)[actualcolumn];
-                    (element as Label).text = Helper.NumberSeperator(content);
-                    colid++;
-                };
-            }
-
-            //Register sorting event
-            shaderTable.columnSortingChanged += OnShaderSortingChanged;
-            
-            //For show/hide variant table
-            shaderTable.RegisterCallback<PointerUpEvent>(ShowHideVariantTable);
-
+            shaderTableAsset = Resources.Load<VisualTreeAsset>("ShaderVariantTool_ShaderTable");
+            shaderTableParent = root.Q<VisualElement>(className:"shader-table");
 
             //Fill the UI data ================================================================
             RefreshUI();
@@ -165,7 +123,7 @@ namespace GfxQA.ShaderVariantTool
             for(int i=0; i<buildRows.Count; i++)
             {
                 //Add some spaces
-                if( buildRows[i][0] =="Shader Count" || buildRows[i][0] =="ComputeShader Count" )
+                if( buildRows[i][0] =="Shader Count" || buildRows[i][0] =="ComputeShader Count" || buildRows[i][0].Contains("Shader Program Count") )
                 {
                     combinedBuildRowsText += "\n";
                 }
@@ -180,10 +138,40 @@ namespace GfxQA.ShaderVariantTool
             build_label_summary.text = combinedBuildRowsText;
 
             //Collapse shader table
-            shaderTable.CollapseAll();
+            //shaderTable.CollapseAll();
+
+            //Recreate ShaderTable ==========================================================
+            if(shaderTable != null) shaderTableParent.Remove(shaderTable);
+            shaderTableTemplate = shaderTableAsset.Instantiate();
+            shaderTable = shaderTableTemplate.Q<MultiColumnTreeView>(name:"ShaderTable");
+            shaderTableParent.Add(shaderTable);
+
+            foreach(string col in shaderRowsHeaderFromCSV)
+            {
+                if(col.Contains("Program Count "))
+                {
+                    //Add more columns
+                    Column newColumn = new Column();
+                    newColumn.name = col;
+                    newColumn.title = col;
+                    newColumn.width = 200;
+                    shaderTable.columns.Add(newColumn);
+                }
+            }
+
+            /* To avoid mouse wheel conflict
+            */
+            ScrollView shaderTableScrollView = shaderTable.Q<ScrollView>();
+            shaderTableScrollView.mode = ScrollViewMode.Vertical;
+            shaderTableScrollView.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+            
+            //Register sorting event
+            shaderTable.columnSortingChanged += OnShaderSortingChanged;
+            
+            //For show/hide variant table
+            shaderTable.RegisterCallback<PointerUpEvent>(ShowHideVariantTable);
 
             //Refresh shader table
-            SetShaderRootItems();
             SetDefaultSortingState(); //Set default sorting state
             OnShaderSortingChanged();
             shaderTable.Rebuild();
@@ -290,7 +278,7 @@ namespace GfxQA.ShaderVariantTool
                 lineData = GetLineCells(lines,lineID);
 
                 //Shader list header
-                //do nothing
+                shaderRowsHeaderFromCSV = lineData;
                 
                 //Next line
                 lineID++;
@@ -359,14 +347,23 @@ namespace GfxQA.ShaderVariantTool
         private MultiColumnTreeView shaderTable;
         private List<TreeViewItemData<string[]>> shaderRoots;
         private List<string[]> shaderRows;
+        private string[] shaderRowsHeaderFromCSV;
         private int defaultSortColumn = 4; //Sorting default is no. variant after stripping (i.e. variant in build)
+        private VisualTreeAsset shaderTableAsset;
+        private VisualElement shaderTableParent;
+        private TemplateContainer shaderTableTemplate;
 
-        private Label CreateShaderTableCellLabel()
+        private VisualElement CreateShaderTableCellLabel()
         {
+            VisualElement el = new VisualElement();
+
             Label l = new Label();
             l.AddToClassList("table-label");
             MakeLabelCopyable(l);
-            return l;
+
+            el.Add(l);
+
+            return el;
         }
 
         //Add to list for setting selection state, so that it clears selection for collapsed items, otherwise table color is quite messy
@@ -397,7 +394,7 @@ namespace GfxQA.ShaderVariantTool
         private void SetShaderRootItems()
         {
             if(shaderRoots == null) shaderRoots = new List<TreeViewItemData<string[]>>(shaderRows.Count);
-            shaderRoots.Clear();
+            shaderRoots.Clear();          
 
             int id = 0;
             for(int i=0; i<shaderRows.Count; i++)
@@ -407,14 +404,87 @@ namespace GfxQA.ShaderVariantTool
                 string[] dum = new string[shaderTable.columns.Count];
                 for(int j = 0; j< shaderTable.columns.Count; j++)
                 {
-                    dum[j] = "-";
+                    //using shaderName+dummy as identifer to recognise if the cell is variant table
+                    string shaderName = "";
+                    if(j==0)
+                    {
+                        shaderName = shaderRows[i][j];
+                    }
+                    dum[j] = shaderName+" dummy"+j;
                 }
                 dummyListTree.Add(new TreeViewItemData<string[]>(id++,dum));
                 
-                //Add shader
-                shaderRoots.Add(new TreeViewItemData<string[]>(id++, shaderRows[i], dummyListTree));
+                //Add shader cell contents
+                string[] shaderRowCells = new string[shaderTable.columns.Count];
+                for(int k=0; k<shaderRowCells.Length; k++)
+                {
+                    Column col = shaderTable.columns.ElementAt(k);
+                    int CSVColumnId = Array.FindIndex(shaderRowsHeaderFromCSV, e => e == col.title);
+                    
+                    shaderRowCells[k] = shaderRows[i][CSVColumnId];
+                }
+                shaderRoots.Add(new TreeViewItemData<string[]>(id++, shaderRowCells, dummyListTree));
             }
             shaderTable.SetRootItems(shaderRoots);
+
+            //Bind cell data to column
+            Columns shaderTableColumns = shaderTable.columns;
+            int colid = 0; //cannot use i inside bindCell as it is always = column count. colid will be increment to columnCount * shaderRowsCount
+            for(int i=0; i<shaderTableColumns.Count; i++)
+            {
+                shaderTable.columns[i].makeCell = () => CreateShaderTableCellLabel();
+                shaderTable.columns[i].bindCell = (VisualElement element, int index) =>
+                {
+                    int actualcolumn = colid % shaderTableColumns.Count;
+                    string content = shaderTable.GetItemDataForIndex<string[]>(index)[actualcolumn];
+                    Label titleLable = element.Q<Label>(className:"table-label");
+                    titleLable.text = Helper.NumberSeperator(content);
+                    colid++;
+
+                    //Remove the variant tables as they need to get refreshed
+                    VisualElement variantTemplateEL = element.Q(className:"VariantTemplate");
+                    if(variantTemplateEL != null)
+                    {
+                        VisualElement templateContainer = variantTemplateEL.parent;
+                        templateContainer.style.display = DisplayStyle.None;
+                        templateContainer.RemoveFromHierarchy();
+                    }
+
+                    //Show the variant table
+                    if(content.Contains("dummy0"))
+                    {
+                        //Get and show the variant table
+                        string shaderName = content.Replace(" dummy"+actualcolumn,"");
+                        VisualElement variantTable = GetVariantTable(shaderName);
+                        variantTable.style.display = DisplayStyle.Flex;
+                        element.Add(variantTable);
+
+                        element.style.display = DisplayStyle.Flex;
+                        titleLable.style.display = DisplayStyle.None; //dummy label
+
+                        element.parent.parent.style.display = DisplayStyle.Flex;
+                        element.parent.parent.AddToClassList("expanded-row-template");
+                    }
+                    //Hide the variant table and the dummy cells
+                    else if(content.Contains("dummy"))
+                    {
+                        element.style.display = DisplayStyle.None;
+                        titleLable.style.display = DisplayStyle.None; //dummy label
+
+                        element.parent.parent.style.display = DisplayStyle.None;
+                        element.parent.parent.RemoveFromClassList("expanded-row-template");
+                    }
+                    //Show the shader root row
+                    else
+                    {
+                        element.style.display = DisplayStyle.Flex;
+                        titleLable.style.display = DisplayStyle.Flex;
+
+                        element.parent.parent.style.display = DisplayStyle.Flex;
+                        element.parent.parent.RemoveFromClassList("expanded-row-template");
+                    }
+                };
+            }
         }
 
         private void SetDefaultSortingState()
@@ -432,6 +502,8 @@ namespace GfxQA.ShaderVariantTool
 
         private void OnShaderSortingChanged()
         {
+            shaderTable.CollapseAll();
+
             var sort = shaderTable.sortColumnDescriptions;
 
             //Sort based on sorting state
@@ -468,8 +540,6 @@ namespace GfxQA.ShaderVariantTool
             
             SetShaderRootItems();
             shaderTable.Rebuild();
-
-            shaderTable.CollapseAll();
             SetShaderTableSelection();
         }
 
@@ -479,6 +549,15 @@ namespace GfxQA.ShaderVariantTool
         private List<string[]> variantRows;
         private int defaultVariantSortColumn = 2; //Sorting default is no. variant after stripping (i.e. variant in build)
         private List<VisualElement> expandedVariantElements;
+        private VisualTreeAsset variantTableAsset;
+
+        private Label CreateVariantTableCellLabel()
+        {
+            Label l = new Label();
+            l.AddToClassList("table-label");
+            MakeLabelCopyable(l);
+            return l;
+        }
 
         private void ResetExpandedVariantElementsList()
         {
@@ -524,115 +603,14 @@ namespace GfxQA.ShaderVariantTool
                     //Collapse
                     shaderTable.CollapseItem(selectedId);
                 }
-
-                RefreshVariantTable();
-            }
-            else
-            {
-                SetShaderTableSelection();
-            }
-        }
-
-        private void RefreshVariantTable()
-        {
-            //Cleanup variant tables as it won't cleanup together with the ListView rows
-            foreach(VisualElement el in expandedVariantElements)
-            {
-                if(el != null)
-                {
-                    el.RemoveFromHierarchy();
-                    el.style.display = DisplayStyle.None;
-                }
             }
 
-            //Show dummy cells
-            var rootIds = shaderTable.GetRootIds().ToList();
-            var rootItemParent = shaderTable.GetRootElementForId(shaderTable.GetRootIds().First()).parent;
-            var alldummyCells = rootItemParent.Query(className: "unity-multi-column-view__cell");
-            alldummyCells.ForEach(el =>
-            {
-                el.style.display = DisplayStyle.Flex;
-            });
-
-            //Show variant table for all expanded roots
-            var rows = rootItemParent.Children();
-            for(int i=0; i<rows.Count(); i++)
-            {
-                int rowId = shaderTable.GetIdForIndex(i);
-                bool rowIsRoot = rootIds.Contains(rowId);
-                if(rowIsRoot)
-                {
-                    VisualElement shaderRowElement = rows.ElementAt(i);//shaderTable.GetRootElementForId(rowId);
-                    if(shaderTable.IsExpanded(rowId))
-                    {
-                        int expandedRowIndex = i + 1;
-                        VisualElement expandedRowElement = rows.ElementAt(expandedRowIndex);
-
-                        //Set bg color
-                        shaderRowElement.AddToClassList("expanded-row");
-                        expandedRowElement.AddToClassList("expanded-row");
-
-                        //Hide dummy cells
-                        var dummyCells = expandedRowElement.Query(className: "unity-multi-column-view__cell");
-                        dummyCells.ForEach(el =>
-                        {
-                            el.style.display = DisplayStyle.None;
-                        });
-
-                        //Show shader row
-                        for(int k=0; k<shaderRowElement.childCount; k++)
-                        {
-                            var shaderCell = shaderRowElement.Children().ElementAt(k);
-                            Label shaderCellLabel = shaderCell.Q<Label>();
-                            shaderCellLabel.style.visibility = Visibility.Visible;
-                            
-                        }
-
-                        //Hide the shader variant cells
-                        // for(int k=1; k<shaderRowElement.childCount; k++)
-                        // {
-                        //     var shaderCell = shaderRowElement.Children().ElementAt(k);
-                        //     Label shaderCellLabel = shaderCell.Q<Label>();
-                        //     shaderCellLabel.style.visibility = Visibility.Hidden;
-                            
-                        // }
-
-                        //Show variant table
-                        AddVariantTable(expandedRowElement,rowId);
-                    }
-                    else //Collapsed
-                    {
-                        //Cleanup expanded backgorund color class
-                        shaderRowElement.RemoveFromClassList("expanded-row");
-
-                        //Show shader row cells
-                        for(int k=0; k<shaderRowElement.childCount; k++)
-                        {
-                            var shaderCell = shaderRowElement.Children().ElementAt(k);
-                            Label shaderCellLabel = shaderCell.Q<Label>();
-                            shaderCellLabel.style.visibility = Visibility.Visible;
-                        }
-                    }
-                }
-            }
-            
-            //To workaround a bug that the container does not recalculate the height of the contents
-            var container = rootItemParent.Q("unity-content-container");
-            container.style.alignItems = Align.Auto;
-            container.RegisterCallback<GeometryChangedEvent, VisualElement>(GeometryChangedCallback,container);
-            
             SetShaderTableSelection();
         }
 
-        private void GeometryChangedCallback(GeometryChangedEvent evt, VisualElement el)
+        private VisualElement GetVariantTable(string shaderName)//int shaderId)
         {
-            el.UnregisterCallback<GeometryChangedEvent,VisualElement>(GeometryChangedCallback);
-            el.style.alignItems = Align.Stretch;
-        }
-
-        private void AddVariantTable(VisualElement parent, int shaderId)
-        {
-            string shaderName = shaderTable.GetItemDataForId<string[]>(shaderId)[0];
+            //string shaderName = shaderTable.GetItemDataForId<string[]>(shaderId)[0];
             int shaderRowsId = shaderRows.FindIndex(x => x[0] == shaderName);
 
             //Try to find the existing expanded Variant of that shader
@@ -642,7 +620,7 @@ namespace GfxQA.ShaderVariantTool
             if(matchingExpandedIndex < 0 || expandedVariantElements[matchingExpandedIndex] == null)
             {
                 //Create variant table for that shader
-                VisualTreeAsset variantTableAsset = Resources.Load<VisualTreeAsset>("ShaderVariantTool_VariantTable");
+                if(variantTableAsset==null) variantTableAsset = Resources.Load<VisualTreeAsset>("ShaderVariantTool_VariantTable");
                 TemplateContainer variantTableTemplate = variantTableAsset.Instantiate();
 
                 //Show the shader summary numbers
@@ -651,7 +629,9 @@ namespace GfxQA.ShaderVariantTool
                 string combinedShaderSummaryText = shaderName + "\n";
                 for(int j=1;j<shaderTableColumns.Count;j++)
                 {
-                    combinedShaderSummaryText += String.Format( format, "Variant Count " + shaderTableColumns[j].title, Helper.NumberSeperator(shaderRows[shaderRowsId][j]) );
+                    int CSVColumnId = Array.FindIndex(shaderRowsHeaderFromCSV, e => e == shaderTableColumns[j].title);
+                    bool addPrefix = !shaderTableColumns[j].title.Contains("Program Count");
+                    combinedShaderSummaryText += String.Format( format, (addPrefix? "Variant Count " : "" ) + shaderTableColumns[j].title, Helper.NumberSeperator(shaderRows[shaderRowsId][CSVColumnId]) );
                     combinedShaderSummaryText += "\n";
                 }
                 Label label_summary = shaderSummaryElement.Q<Label>(className:"summary-label-content");
@@ -715,7 +695,7 @@ namespace GfxQA.ShaderVariantTool
                     int colid = 0;
                     for(int i=0; i<variantTableColumns.Count; i++)
                     {
-                        variantTable.columns[i].makeCell = () => CreateShaderTableCellLabel();
+                        variantTable.columns[i].makeCell = () => CreateVariantTableCellLabel();
                         variantTable.columns[i].bindCell = (VisualElement element, int index) =>
                         {
                             int actualcolumn = colid % variantTableColumns.Count;
@@ -748,17 +728,7 @@ namespace GfxQA.ShaderVariantTool
             //Make the table visible
             expandedVariantElements[matchingExpandedIndex].style.display = DisplayStyle.Flex;
 
-            //Make sure the variant table is under correct expanded row item
-            expandedVariantElements[matchingExpandedIndex].RemoveFromHierarchy();
-            parent.Add(expandedVariantElements[matchingExpandedIndex]);
-            
-            //Show variant table cells
-            var cells = expandedVariantElements[matchingExpandedIndex].Query(className: "unity-multi-column-view__cell");
-            cells.ForEach(el =>
-            {
-                el.style.display = DisplayStyle.Flex;
-            });
-            
+            return expandedVariantElements[matchingExpandedIndex];        
         }
         
         /*

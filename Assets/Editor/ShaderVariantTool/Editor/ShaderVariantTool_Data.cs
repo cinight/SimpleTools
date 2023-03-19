@@ -14,6 +14,20 @@ namespace GfxQA.ShaderVariantTool
     
     //===================================================================================================
 
+    public class ShaderProgram
+    {
+        public string gfxAPI = "";
+        public uint count_internal = 0;
+        public uint count_unique = 0;
+
+        public ShaderProgram(string api, uint program_internal, uint program_unique)
+        {
+            gfxAPI = api;
+            count_internal = program_internal;
+            count_unique = program_unique;
+        }
+    }
+
     public class ShaderItem
     {
         public bool isComputeShader = false;
@@ -33,6 +47,19 @@ namespace GfxQA.ShaderVariantTool
         public uint editorLog_variantInCache = 0;
         public float editorLog_timeCompile = 0;
         public float editorLog_timeStripping = 0;
+        
+        public List<ShaderProgram> programs = new List<ShaderProgram>();
+
+        public int FindMatchingProgramItem(ShaderProgram pgm)
+        {
+            //find the matching shader program
+            int matchedId = programs.FindIndex
+            ( e =>
+                e.gfxAPI == pgm.gfxAPI
+            );
+
+            return matchedId;
+        }
 
         public List<KeywordItem> keywordItems = new List<KeywordItem>();
 

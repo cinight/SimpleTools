@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="ShaderVariantTool_Style.uss" />
+    <ui:VisualElement class="ShaderTableTemplate">
+
+        <!-- Shader table -->
+        <ui:MultiColumnTreeView name="ShaderTable" virtualization-method="DynamicHeight" show-border="true" sorting-enabled="true" show-alternating-row-backgrounds="ContentOnly"  selection-type="Single">
+            <ui:Columns name="ShaderColumns" reorderable="false">
+                <ui:Column name="ShaderName" title="Shader Name" width="400" />
+                <ui:Column name="Original" title="Original" width="200" />
+                <ui:Column name="AfterPrefiltering" title="After Prefiltering" width="200" />
+                <ui:Column name="AfterBuiltinStripping" title="After Builtin-Stripping" width="200" />
+                <ui:Column name="AfterScriptableStripping" title="After Scriptable-Stripping" width="200" />
+                <ui:Column name="DynamicBranch" title="Dynamic Branch" width="200" />
+            </ui:Columns>
+        </ui:MultiColumnTreeView>
+
+    </ui:VisualElement>
+</ui:UXML>

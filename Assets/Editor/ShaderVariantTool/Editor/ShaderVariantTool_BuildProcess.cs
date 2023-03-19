@@ -126,10 +126,15 @@ namespace GfxQA.ShaderVariantTool
             //Calculate total shader numbers
             ShaderItem totalNormalShader = new ShaderItem();
             uint totalNormalShaderCount = 0;
+            uint totalProgramInternalCount = 0;
+            uint totalProgramUniqueCount = 0;
             ShaderItem totalComputeShader = new ShaderItem(); totalComputeShader.isComputeShader = true;
             uint totalComputeShaderCount = 0;
             foreach(ShaderItem si in SVL.shaderlist)
             {
+                //For bug checking
+                uint shaderInternalProgramCount = 0;
+
                 if(si.isComputeShader)
                 {
                     totalComputeShaderCount ++;
@@ -165,6 +170,22 @@ namespace GfxQA.ShaderVariantTool
                     totalNormalShader.editorLog_variantInCache += si.editorLog_variantInCache;
                     totalNormalShader.editorLog_timeCompile += si.editorLog_timeCompile;
                     totalNormalShader.editorLog_timeStripping += si.editorLog_timeStripping;
+
+
+                    foreach(ShaderProgram pgm in si.programs)
+                    {
+                        shaderInternalProgramCount += pgm.count_internal;
+                        totalProgramInternalCount += pgm.count_internal;
+                        totalProgramUniqueCount += pgm.count_unique;
+                    }
+                }
+
+                //Bug Check - if the shader has errors, then the program count drops, the tool should print out error message to warn user too
+                if( !si.isComputeShader && shaderInternalProgramCount != si.editorLog_variantAfterSciptableStrippingCount)
+                {
+                    Debug.LogError("ShaderVariantTool error #E08. "+
+                    "Shader "+si.name+" has "+si.editorLog_variantAfterSciptableStrippingCount+" variants after ScriptableStripping, "+
+                    "but Internal Program Count is not having same number: "+shaderInternalProgramCount+". "+"This might due to this shader has errors, so please check console for the shader errors.");
                 }
             }
 
@@ -197,6 +218,9 @@ namespace GfxQA.ShaderVariantTool
             outputRows.Add( new string[] { "- Cached:" , totalNormalShader.editorLog_variantInCache.ToString() } );
             outputRows.Add( new string[] { "- Compiled:" , totalNormalShader.editorLog_variantCompiledCount.ToString() } );
             outputRows.Add( new string[] { "Shader Dynamic Branch variant count" , totalNormalShader.count_dynamicVariant_after.ToString() } );
+            outputRows.Add( new string[] { "Shader Program Count" , "" } );
+            outputRows.Add( new string[] { "- Internal:" , totalProgramInternalCount.ToString() } );
+            outputRows.Add( new string[] { "- Unique:" , totalProgramUniqueCount.ToString() } );
 
             //Compute counts
             outputRows.Add( new string[] { "ComputeShader Count" , totalComputeShaderCount.ToString() } );
@@ -205,56 +229,80 @@ namespace GfxQA.ShaderVariantTool
             outputRows.Add( new string[] { "Compute Dynamic Branch variant count" , totalComputeShader.count_dynamicVariant_after.ToString() } );
             outputRows.Add( new string[] { "" } );
 
-            //Shader table //remember to match the order in Main.uxml
-            outputRows.Add( new string[] 
-            { 
-                "Shader", 
-                "Variant Count original",
-                "Variant Count after Prefiltering", 
-                "Variant Count after Builtin-Stripping",
-                "Variant after Scriptable-Stripping", 
-                "Dynamic branch variants",
-                "Variant in Cache",
-                "Compiled Variant Count", 
-                "Stripping Time",
-                "Compilation Time",
-                "IsComputeShader"
-            } );
+            //Shader table //remember to match the order & title in Main.uxml
+            List<string> shaderTableHeaderRow = new List<string>();
+            shaderTableHeaderRow.Add("Shader Name");
+            shaderTableHeaderRow.Add("Original");
+            shaderTableHeaderRow.Add("After Prefiltering");
+            shaderTableHeaderRow.Add("After Builtin-Stripping");
+            shaderTableHeaderRow.Add("After Scriptable-Stripping");
+            shaderTableHeaderRow.Add("Dynamic Branch");
+            shaderTableHeaderRow.Add("Variant in Cache");
+            shaderTableHeaderRow.Add("Compiled Variant Count");
+            shaderTableHeaderRow.Add("Stripping Time");
+            shaderTableHeaderRow.Add("Compilation Time");
+            shaderTableHeaderRow.Add("IsComputeShader");
+            //Additional header due to per-graphics API program count
+            foreach(ShaderItem si in SVL.shaderlist)
+            {
+                foreach(ShaderProgram pgm in si.programs)
+                {
+                    string program_header = "Program Count "+pgm.gfxAPI;
+
+                    int shaderTableColumnId = shaderTableHeaderRow.FindIndex(e => e == program_header);
+                    if(shaderTableColumnId == -1)
+                    {
+                        shaderTableHeaderRow.Add(program_header);
+                    }
+                }
+            }
+            outputRows.Add(shaderTableHeaderRow.ToArray());
+            //Fill the table
             foreach(ShaderItem si in SVL.shaderlist)
             {
                 if(si.isComputeShader)
                 {
-                    outputRows.Add( new string[] 
-                    { 
-                        si.name, 
-                        "-1", //Compute shader do not have Editor log original, prefilter counts
-                        "-1",
-                        si.count_variant_before.ToString(),
-                        si.count_variant_after.ToString(),
-                        si.count_dynamicVariant_after.ToString(),
-                        si.editorLog_variantInCache.ToString(),
-                        si.editorLog_variantCompiledCount.ToString(),
-                        Helper.TimeFormatString( si.editorLog_timeStripping ),
-                        Helper.TimeFormatString( si.editorLog_timeCompile ),
-                        "True"
-                    } );
+                    string[] shaderTableItemRow = new string[shaderTableHeaderRow.Count];
+                    shaderTableItemRow[0] = si.name;
+                    shaderTableItemRow[1] = "-1"; //Compute shader do not have Editor log original, prefilter counts
+                    shaderTableItemRow[2] = "-1";
+                    shaderTableItemRow[3] = si.count_variant_before.ToString();
+                    shaderTableItemRow[4] = si.count_variant_after.ToString();
+                    shaderTableItemRow[5] = si.count_dynamicVariant_after.ToString();
+                    shaderTableItemRow[6] = si.editorLog_variantInCache.ToString();
+                    shaderTableItemRow[7] = si.editorLog_variantCompiledCount.ToString();
+                    shaderTableItemRow[8] = Helper.TimeFormatString( si.editorLog_timeStripping );
+                    shaderTableItemRow[9] = Helper.TimeFormatString( si.editorLog_timeCompile );
+                    shaderTableItemRow[10] = "True";
+                    for(int k=11; k<shaderTableHeaderRow.Count; k++)
+                    {
+                        shaderTableItemRow[k] = "N/A";
+                    }
+                    outputRows.Add(shaderTableItemRow);
                 }
                 else
                 {
-                    outputRows.Add( new string[] 
-                    { 
-                        si.name, 
-                        si.editorLog_variantOriginalCount.ToString(),
-                        si.editorLog_variantAfterPrefilteringCount.ToString(),
-                        si.editorLog_variantAfterBuiltinStrippingCount.ToString(),
-                        si.editorLog_variantAfterSciptableStrippingCount.ToString(),
-                        si.count_dynamicVariant_after.ToString(),
-                        si.editorLog_variantInCache.ToString(),
-                        si.editorLog_variantCompiledCount.ToString(),
-                        Helper.TimeFormatString( si.editorLog_timeStripping ),
-                        Helper.TimeFormatString( si.editorLog_timeCompile ),
-                        "False"
-                    } );
+                    string[] shaderTableItemRow = new string[shaderTableHeaderRow.Count];
+                    shaderTableItemRow[0] = si.name;
+                    shaderTableItemRow[1] = si.editorLog_variantOriginalCount.ToString();
+                    shaderTableItemRow[2] = si.editorLog_variantAfterPrefilteringCount.ToString();
+                    shaderTableItemRow[3] = si.editorLog_variantAfterBuiltinStrippingCount.ToString();
+                    shaderTableItemRow[4] = si.editorLog_variantAfterSciptableStrippingCount.ToString();
+                    shaderTableItemRow[5] = si.count_dynamicVariant_after.ToString();
+                    shaderTableItemRow[6] = si.editorLog_variantInCache.ToString();
+                    shaderTableItemRow[7] = si.editorLog_variantCompiledCount.ToString();
+                    shaderTableItemRow[8] = Helper.TimeFormatString( si.editorLog_timeStripping );
+                    shaderTableItemRow[9] = Helper.TimeFormatString( si.editorLog_timeCompile );
+                    shaderTableItemRow[10] = "False";
+                    foreach(ShaderProgram pgm in si.programs)
+                    {
+                        int shaderTableColumnId = shaderTableHeaderRow.FindIndex(e => e == "Program Count "+pgm.gfxAPI);
+                        if(shaderTableColumnId != -1)
+                        {
+                            shaderTableItemRow[shaderTableColumnId] = "internal: "+pgm.count_internal+" | "+"unique: "+pgm.count_unique;
+                        }
+                    }
+                    outputRows.Add(shaderTableItemRow);
                 }
             }
             outputRows.Add( new string[] { "" } );
@@ -343,7 +391,11 @@ namespace GfxQA.ShaderVariantTool
                 }
                 while (!endFound)
                 {
-                    currentLine = sr.ReadLine();
+                    if(!currentLine.Contains("Compiling shader "))
+                    {
+                        currentLine = sr.ReadLine();
+                    }
+
                     if(currentLine.Contains(totext))
                     {
                         endFound = true;
@@ -532,6 +584,44 @@ namespace GfxQA.ShaderVariantTool
                             shaderItem.editorLog_variantInCache += localCacheInt+remoteCacheInt;
                             shaderItem.editorLog_timeStripping += strippingTimeFloat;
                             shaderItem.editorLog_timeCompile += compileTimeFloat;
+
+                            //Log shader program counts
+                            /*
+                                Serialized binary data for shader Hidden/VideoDecode in 0.00s
+                                d3d11 (total internal programs: 30, unique: 19)
+                                vulkan (total internal programs: 15, unique: 15)
+                            */
+                            currentLine = sr.ReadLine();
+                            while(currentLine.Contains("Prepared data for serialisation in "))
+                            {
+                                currentLine = sr.ReadLine();
+                            }
+                            if (currentLine.Contains("Serialized binary data for shader "+shaderName))
+                            {
+                                currentLine = sr.ReadLine();
+                                while(currentLine.Contains("total internal programs:"))
+                                {
+                                    string gfxAPI = Helper.ExtractString(currentLine,""," (total internal programs: ",false);
+                                           gfxAPI = gfxAPI.Replace(" ","");
+                                    string programCount_internal_string = Helper.ExtractString(currentLine,"total internal programs: ",", unique: ",false);
+                                    string programCount_unique_string = Helper.ExtractString(currentLine,", unique: ",")",false);
+                                    uint programCount_internal = uint.Parse(programCount_internal_string);
+                                    uint programCount_unique = uint.Parse(programCount_unique_string); 
+
+                                    ShaderProgram pgm = new ShaderProgram(gfxAPI, programCount_internal, programCount_unique);
+                                    int matchedProgramId = shaderItem.FindMatchingProgramItem(pgm);
+                                    if(matchedProgramId == -1)
+                                    {
+                                        shaderItem.programs.Add(pgm);
+                                    }
+                                    else
+                                    {
+                                        shaderItem.programs[matchedProgramId].count_internal += programCount_internal;
+                                        shaderItem.programs[matchedProgramId].count_unique += programCount_unique;
+                                    }
+                                    currentLine = sr.ReadLine();
+                                }
+                            }
 
                             //Bug checking
                             sum_variantCountSkipped += skippedVariantsInt;
