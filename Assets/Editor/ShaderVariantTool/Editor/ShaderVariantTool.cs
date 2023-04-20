@@ -523,7 +523,7 @@ namespace GfxQA.ShaderVariantTool
                         shaderRows = shaderRows.OrderByDescending(o=>float.Parse(o[columnId])).ToList();
                     }
                 }
-                else
+                else if(columnId >= 0) //avoid columnId = -1
                 {
                     //sort string Alphabetical Order
                     if(sort[i].direction == SortDirection.Ascending)
