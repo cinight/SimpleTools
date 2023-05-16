@@ -7,7 +7,7 @@ using Unity.Profiling;
 using Unity.Profiling.LowLevel.Unsafe;
 using UnityEditor;
 
-public class AvailableProfilerMarkers
+public class AvailableProfilerMarkersAndSamplers
 {
     struct StatInfo
     {
@@ -56,5 +56,30 @@ public class AvailableProfilerMarkers
         }
 
         Debug.Log("saved_to: "+filePath);
+
+        AssetDatabase.Refresh();
+    }
+
+    [MenuItem("Test/GetAvailableSamplers")]
+    static unsafe void EnumerateSamplers()
+    {
+        List<string> names = new List<string>();
+        UnityEngine.Profiling.Sampler.GetNames(names);
+
+        var sb = new StringBuilder("Active Samplers:"+" "+names.Count+"\n");
+        foreach (var n in names)
+        {
+            sb.AppendLine(n);
+        }
+
+        string filePath = Application.dataPath+"/AvailableSamplers.txt";
+        using (System.IO.StreamWriter file = new System.IO.StreamWriter(filePath))
+        {
+            file.WriteLine(sb.ToString());
+        }
+
+        Debug.Log("saved_to: "+filePath);
+
+        AssetDatabase.Refresh();
     }
 }
