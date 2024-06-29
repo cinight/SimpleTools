@@ -1,9 +1,5 @@
 ﻿using UnityEditor;
 using UnityEngine;
-using System.Linq;
-using System.Collections.Generic;
-using System;
-
 
 public class PlaceObjectsTool : EditorWindow
 {
@@ -27,6 +23,8 @@ public class PlaceObjectsTool : EditorWindow
     bool    tg_ran_pos = false;
     bool    tg_ran_rot = false;
     bool    tg_ran_sca = false;
+    bool    tg_ran_scaUniform = false;
+    bool    tg_ranSphere = false;
 
     //Distribute evenly
     Vector3 spacing            = Vector3.one; //-1 means no limit
@@ -51,6 +49,7 @@ public class PlaceObjectsTool : EditorWindow
     Vector3 ran_rot_max        = Vector3.zero;
     Vector3 ran_sca_min        = Vector3.one;
     Vector3 ran_sca_max        = Vector3.one;
+    private float tg_ranSphere_radius = 1f;
 
     [MenuItem("Window/Place Objects Tool")]
 	public static void ShowWindow ()
@@ -119,12 +118,27 @@ public class PlaceObjectsTool : EditorWindow
         tg_ran_sca = EditorGUILayout.Foldout (tg_ran_sca, "Random Scale");
         if(tg_ran_sca)
         {
-            ran_sca_min = EditorGUILayout.Vector3Field("Min", ran_sca_min);
-            ran_sca_max = EditorGUILayout.Vector3Field("Max", ran_sca_max);
+            tg_ran_scaUniform = EditorGUILayout.Toggle("Uniform Scale", tg_ran_scaUniform);
+            if (tg_ran_scaUniform)
+            {
+                ran_sca_min.x = EditorGUILayout.FloatField("Min", ran_sca_min.x);
+                ran_sca_max.x = EditorGUILayout.FloatField("Max", ran_sca_max.x);
+            }
+            else
+            {
+                ran_sca_min = EditorGUILayout.Vector3Field("Min", ran_sca_min);
+                ran_sca_max = EditorGUILayout.Vector3Field("Max", ran_sca_max);
+            }
         }
         EditorGUILayout.EndToggleGroup();
         GUILayout.Space(15);
 
+        //Random title
+        tg_ranSphere = EditorGUILayout.BeginToggleGroup ("Random In Sphere", tg_ranSphere);
+        tg_ranSphere_radius = EditorGUILayout.FloatField("Radius", tg_ranSphere_radius);
+        EditorGUILayout.EndToggleGroup();
+        GUILayout.Space(15);
+        
         //Buttons
         Color original = GUI.backgroundColor;
         EditorGUILayout.BeginHorizontal();
@@ -353,7 +367,24 @@ public class PlaceObjectsTool : EditorWindow
         {
             for (int i = 0; i < objs.Length; i++)
             {
-                objs[i].localScale = RandomV3(ran_sca_min, ran_sca_max);
+                if (tg_ran_scaUniform)
+                {
+                    float ran = Random.Range(ran_sca_min.x, ran_sca_max.x);
+                    objs[i].localScale = new Vector3(ran, ran, ran);
+                }
+                else
+                {
+                    objs[i].localScale = RandomV3(ran_sca_min, ran_sca_max);
+                }
+            }
+        }
+        
+        //Random in sphere
+        if (tg_ranSphere)
+        {
+            for (int i = 0; i < objs.Length; i++)
+            {
+                objs[i].localPosition = UnityEngine.Random.insideUnitSphere * tg_ranSphere_radius;
             }
         }
     }
